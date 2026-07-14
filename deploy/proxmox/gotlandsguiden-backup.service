@@ -1,0 +1,9 @@
+[Unit]
+Description=Gotlandsguiden SQLite backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/gotlandsguiden/deploy/proxmox
+ExecStart=/opt/gotlandsguiden/deploy/proxmox/backup.sh

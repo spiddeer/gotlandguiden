@@ -82,6 +82,16 @@ chmod +x backup.sh
 
 Backuper sparas i `deploy/proxmox/backups/`.
 
+Aktivera nattlig backup via systemd timer (03:30 varje natt):
+
+```bash
+sudo cp /opt/gotlandsguiden/deploy/proxmox/gotlandsguiden-backup.service /etc/systemd/system/
+sudo cp /opt/gotlandsguiden/deploy/proxmox/gotlandsguiden-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now gotlandsguiden-backup.timer
+sudo systemctl list-timers --all | grep gotlandsguiden-backup
+```
+
 ## 8) Reverse proxy och domän (valfritt)
 
 Peka Nginx Proxy Manager/Traefik eller annan reverse proxy till:
@@ -95,6 +105,9 @@ För TLS: använd Let's Encrypt i din reverse proxy.
 
 ```bash
 cd /opt/gotlandsguiden
+
+# Rekommenderat: enkommandodeploy
+./deploy/proxmox/deploy.sh
 
 # Start / stop
  docker compose -f deploy/proxmox/docker-compose.yml up -d
