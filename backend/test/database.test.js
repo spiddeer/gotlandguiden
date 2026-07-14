@@ -56,7 +56,7 @@ test("migrations create the rich schema and default categories", () => {
     assert.ok(tables.has(table), `${table} should exist`);
   }
   assert.equal(listCategories(database).length, 10);
-  assert.equal(database.prepare("SELECT COUNT(*) count FROM schema_migrations").get().count, 3);
+  assert.equal(database.prepare("SELECT COUNT(*) count FROM schema_migrations").get().count, 4);
   database.close();
 });
 
@@ -189,6 +189,40 @@ test("a new source snapshot hides stale imports without deleting their enrichmen
   assert.equal(
     database.prepare("SELECT opening_hours_note note FROM place_details WHERE place_id = 'stale-n1'").get().note,
     "Manuellt kontrollerad"
+  );
+  database.close();
+});
+
+test("source categories are synchronized while manual supplemental categories remain", () => {
+  const database = openDatabase(":memory:");
+  const source = {
+    sourceType: "OpenStreetMap",
+    externalId: "kallplats-n1",
+    lastVerifiedAt: "2026-07-14",
+  };
+  const core = {
+    id: "kallplats-n1",
+    name: "Källplats",
+    category: "sevardhet",
+    categories: ["sevardhet", "service"],
+    lat: 57.5,
+    lng: 18.5,
+    description: "Besöksmål",
+  };
+  mergeImportedPlace(database, core, source);
+  database.prepare(`
+    INSERT INTO place_categories (place_id, category_id, is_primary, source_type)
+    VALUES ('kallplats-n1', 'familj', 0, NULL)
+  `).run();
+
+  mergeImportedPlace(database, { ...core, categories: ["sevardhet"] }, source);
+  assert.deepEqual(getPlace(database, core.id).categories, ["sevardhet", "familj"]);
+  assert.equal(
+    database.prepare(`
+      SELECT source_type FROM place_categories
+      WHERE place_id = 'kallplats-n1' AND category_id = 'sevardhet'
+    `).get().source_type,
+    "OpenStreetMap"
   );
   database.close();
 });

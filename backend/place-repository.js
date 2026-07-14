@@ -111,13 +111,23 @@ function mergeImportedPlace(db, place, source = null) {
   upsertCorePlace(db, place, source);
   db.prepare("UPDATE places SET is_active = 1 WHERE id = ?").run(place.id);
 
-  const insertCategory = db.prepare(`
-    INSERT INTO place_categories (place_id, category_id, is_primary)
-    VALUES (?, ?, 0)
-    ON CONFLICT(place_id, category_id) DO NOTHING
-  `);
-  for (const categoryId of place.categories || []) {
-    if (categoryId !== place.category) insertCategory.run(place.id, categoryId);
+  const sourceType = source?.sourceType || null;
+  if (sourceType) {
+    db.prepare("DELETE FROM place_categories WHERE place_id = ? AND source_type = ?")
+      .run(place.id, sourceType);
+    db.prepare("UPDATE place_categories SET is_primary = 0 WHERE place_id = ?")
+      .run(place.id);
+    const insertCategory = db.prepare(`
+      INSERT INTO place_categories (place_id, category_id, is_primary, source_type)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(place_id, category_id) DO UPDATE SET
+        is_primary = excluded.is_primary,
+        source_type = excluded.source_type
+    `);
+    const categories = [...new Set([place.category, ...(place.categories || [])])];
+    for (const categoryId of categories) {
+      insertCategory.run(place.id, categoryId, categoryId === place.category ? 1 : 0, sourceType);
+    }
   }
 
   const address = place.address || {};

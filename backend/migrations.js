@@ -130,6 +130,22 @@ const MIGRATIONS = [
       `);
     },
   },
+  {
+    version: 4,
+    name: "track_category_source",
+    up(db) {
+      db.exec(`
+        ALTER TABLE place_categories ADD COLUMN source_type TEXT;
+        UPDATE place_categories
+        SET source_type = 'OpenStreetMap'
+        WHERE place_id IN (
+          SELECT place_id FROM place_sources WHERE source_type = 'OpenStreetMap'
+        );
+        CREATE INDEX IF NOT EXISTS idx_place_categories_source
+          ON place_categories(source_type, place_id);
+      `);
+    },
+  },
 ];
 
 function runMigrations(db) {
