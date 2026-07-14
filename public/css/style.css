@@ -699,6 +699,7 @@ body {
 
 .place-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
   margin-top: 0.68rem;
@@ -716,32 +717,84 @@ body {
   letter-spacing: 0.05em;
 }
 
+.place-status {
+  font-weight: 600;
+}
+
+.place-status-wanted {
+  color: #d73f61;
+}
+
+.place-status-visited {
+  color: #1d8e63;
+}
+
+.place-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  align-self: center;
+}
+
 .fav-btn {
-  border: none;
-  background: none;
-  font-size: 1.42rem;
-  line-height: 1;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 1.28rem;
+  line-height: 1.1;
   cursor: pointer;
   padding: 0;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   color: #b6b7bd;
   align-self: center;
-  transition: transform 0.1s ease, color 0.15s ease;
+  border-radius: 999px;
+  transition: transform 0.1s ease, color 0.15s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .fav-btn:hover {
   color: #df4f68;
+  border-color: rgba(223, 79, 104, 0.4);
+  background: rgba(223, 79, 104, 0.08);
 }
 
 .fav-btn:active {
-  transform: scale(1.25);
+  transform: scale(1.16);
 }
 
 .fav-btn.is-fav {
   color: #e64264;
+}
+
+.visit-btn {
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 1.08rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: #8f98a0;
+  border-radius: 999px;
+  transition: transform 0.1s ease, color 0.15s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.visit-btn:hover {
+  color: #1d8e63;
+  border-color: rgba(29, 142, 99, 0.42);
+  background: rgba(29, 142, 99, 0.1);
+}
+
+.visit-btn:active {
+  transform: scale(1.12);
+}
+
+.visit-btn.is-visited {
+  color: #1d8e63;
 }
 
 .place-marker {
@@ -917,6 +970,20 @@ body {
   color: var(--color-text-muted);
 }
 
+.detail-status {
+  margin: 0 0 0.6rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.detail-status-wanted {
+  color: #d73f61;
+}
+
+.detail-status-visited {
+  color: #1d8e63;
+}
+
 .detail-desc {
   margin: 0 0 1.2rem;
   line-height: 1.72;
@@ -1016,6 +1083,14 @@ body {
 
 .btn-primary:hover {
   filter: brightness(1.03);
+}
+
+.saved-group-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin: 0.2rem 0 0.1rem;
 }
 
 @media (max-width: 767px) and (max-height: 700px) {

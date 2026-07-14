@@ -7,6 +7,7 @@ const DEFAULT_ZOOM = 9;
 const LOCATED_ZOOM = 12;
 const FOCUS_ZOOM = 14;
 const FAVORITES_KEY = "gg_favorites";
+const VISITED_KEY = "gg_visited";
 const DARK_KEY = "gg_dark";
 const ACTIVE_TAB_KEY = "gg_active_tab";
 
@@ -17,6 +18,7 @@ const state = {
   activeCategory: "all", // "all" | "favorites" | kategori-nyckel
   query: "",
   favorites: loadFavorites(),
+  visited: loadVisited(),
   selectedId: null,
   activeTab: "upptack", // "upptack" | "sparade" | "guide"
 };
@@ -125,25 +127,48 @@ darkBtn.addEventListener("click", toggleDarkMode);
 applyTheme(loadTheme());
 
 function loadFavorites() {
+  let ids = [];
   try {
-    return new Set(JSON.parse(localStorage.getItem(FAVORITES_KEY)) || []);
-  } catch (e) {
-    return new Set();
-  }
+    ids = JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [];
+  } catch (e) {}
+  return new Set(ids);
 }
 
-function saveFavorites() {
+function loadVisited() {
+  let ids = [];
+  try {
+    ids = JSON.parse(localStorage.getItem(VISITED_KEY)) || [];
+  } catch (e) {}
+  return new Set(ids);
+}
+
+function saveStatusLists() {
   try {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify([...state.favorites]));
+    localStorage.setItem(VISITED_KEY, JSON.stringify([...state.visited]));
   } catch (e) {
     /* localStorage kan vara blockerad – strunt i det */
   }
 }
 
 function toggleFavorite(id) {
-  if (state.favorites.has(id)) state.favorites.delete(id);
-  else state.favorites.add(id);
-  saveFavorites();
+  if (state.favorites.has(id)) {
+    state.favorites.delete(id);
+  } else {
+    state.favorites.add(id);
+    state.visited.delete(id);
+  }
+  saveStatusLists();
+}
+
+function toggleVisited(id) {
+  if (state.visited.has(id)) {
+    state.visited.delete(id);
+  } else {
+    state.visited.add(id);
+    state.favorites.delete(id);
+  }
+  saveStatusLists();
 }
 
 // ---------------------------------------------------------------------------
@@ -212,6 +237,8 @@ function visiblePlaces() {
 
   if (state.activeCategory === "favorites") {
     items = items.filter((p) => state.favorites.has(p.id));
+  } else if (state.activeCategory === "visited") {
+    items = items.filter((p) => state.visited.has(p.id));
   } else if (state.activeCategory !== "all") {
     items = items.filter((p) =>
       (Array.isArray(p.categories) ? p.categories : [p.category]).includes(state.activeCategory)
@@ -260,7 +287,8 @@ function renderMarkers(items) {
 
 function placeCard(p) {
   const cat = CATEGORIES[p.category];
-  const isFav = state.favorites.has(p.id);
+  const isWanted = state.favorites.has(p.id);
+  const isVisited = state.visited.has(p.id);
 
   const meta = el("div", { class: "place-meta" }, [
     p.distance != null
@@ -268,17 +296,35 @@ function placeCard(p) {
       : null,
     p.distance != null ? el("span", { text: "·" }) : null,
     el("span", { class: "place-category", text: cat?.label || p.category }),
+    (isWanted || isVisited) ? el("span", { text: "·" }) : null,
+    isWanted ? el("span", { class: "place-status place-status-wanted", text: "Vill besöka" }) : null,
+    isVisited ? el("span", { class: "place-status place-status-visited", text: "Besökt" }) : null,
   ]);
 
   const favBtn = el("button", {
     type: "button",
-    class: "fav-btn" + (isFav ? " is-fav" : ""),
-    "aria-label": isFav ? "Ta bort från sparade" : "Spara plats",
-    "aria-pressed": String(isFav),
-    text: isFav ? "♥" : "♡",
+    class: "fav-btn" + (isWanted ? " is-fav" : ""),
+    "aria-label": isWanted ? "Ta bort från vill besöka" : "Markera som vill besöka",
+    "aria-pressed": String(isWanted),
+    title: isWanted ? "Ta bort från vill besöka" : "Markera som vill besöka",
+    text: isWanted ? "♥" : "♡",
     onClick: (e) => {
       e.stopPropagation();
       toggleFavorite(p.id);
+      render();
+    },
+  });
+
+  const visitedBtn = el("button", {
+    type: "button",
+    class: "visit-btn" + (isVisited ? " is-visited" : ""),
+    "aria-label": isVisited ? "Markera som inte besökt" : "Markera som besökt",
+    "aria-pressed": String(isVisited),
+    title: isVisited ? "Markera som inte besökt" : "Markera som besökt",
+    text: "✓",
+    onClick: (e) => {
+      e.stopPropagation();
+      toggleVisited(p.id);
       render();
     },
   });
@@ -304,7 +350,7 @@ function placeCard(p) {
         el("p", { class: "place-desc", text: p.description }),
         meta,
       ]),
-      favBtn,
+      el("div", { class: "place-actions" }, [favBtn, visitedBtn]),
     ]
   );
   card.style.borderLeftColor = cat?.color || "#666";
@@ -314,14 +360,17 @@ function placeCard(p) {
 function renderList(items) {
   listEl.replaceChildren();
 
-  if (state.activeCategory === "favorites") listTitleEl.textContent = "Sparade platser";
+  if (state.activeCategory === "favorites") listTitleEl.textContent = "Platser du vill besöka";
+  else if (state.activeCategory === "visited") listTitleEl.textContent = "Platser du besökt";
   else if (state.userLatLng) listTitleEl.textContent = "Platser nära dig";
   else listTitleEl.textContent = "Platser på Gotland";
 
   if (items.length === 0) {
     const msg =
       state.activeCategory === "favorites"
-        ? "Du har inte sparat några platser än. Tryck på hjärtat på ett kort."
+        ? "Du har inte markerat några platser som vill besöka än."
+        : state.activeCategory === "visited"
+        ? "Du har inte markerat några platser som besökta än."
         : "Inga platser matchar din sökning.";
     listEl.appendChild(el("li", { class: "place-placeholder", text: msg }));
     return;
@@ -333,38 +382,63 @@ function renderList(items) {
 function renderSavedList() {
   savedListEl.replaceChildren();
 
-  const savedItems = state.places
+  const compareSavedItems = (a, b) => {
+    if (a.distance == null && b.distance == null) return a.name.localeCompare(b.name, "sv");
+    if (a.distance == null) return 1;
+    if (b.distance == null) return -1;
+    return a.distance - b.distance;
+  };
+
+  const wantedItems = state.places
     .filter((p) => state.favorites.has(p.id))
     .map((p) => ({
       ...p,
       distance: state.userLatLng ? distanceMeters(state.userLatLng, [p.lat, p.lng]) : null,
     }))
-    .sort((a, b) => {
-      if (a.distance == null && b.distance == null) return a.name.localeCompare(b.name, "sv");
-      if (a.distance == null) return 1;
-      if (b.distance == null) return -1;
-      return a.distance - b.distance;
-    });
+    .sort(compareSavedItems);
 
-  if (savedItems.length === 0) {
-    savedSummaryEl.textContent = "Du har inga favoriter ännu. Tryck på hjärtat i Upptäck för att spara platser.";
+  const visitedItems = state.places
+    .filter((p) => state.visited.has(p.id))
+    .map((p) => ({
+      ...p,
+      distance: state.userLatLng ? distanceMeters(state.userLatLng, [p.lat, p.lng]) : null,
+    }))
+    .sort(compareSavedItems);
+
+  if (wantedItems.length === 0 && visitedItems.length === 0) {
+    savedSummaryEl.textContent = "Du har inga markerade platser ännu. Markera i Upptäck med ♥ eller ✓.";
     savedListEl.appendChild(
       el("li", {
         class: "place-placeholder",
-        text: "Inga sparade platser ännu.",
+        text: "Inga markerade platser ännu.",
       })
     );
     return;
   }
 
-  savedSummaryEl.textContent = `Du har sparat ${savedItems.length} plats${savedItems.length === 1 ? "" : "er"}.`;
-  savedItems.forEach((p) => savedListEl.appendChild(placeCard(p)));
+  const wantedCount = wantedItems.length;
+  const visitedCount = visitedItems.length;
+  savedSummaryEl.textContent = `Vill besöka: ${wantedCount} • Besökta: ${visitedCount}`;
+
+  savedListEl.appendChild(el("li", { class: "saved-group-title", text: "♥ Vill besöka" }));
+  if (wantedItems.length === 0) {
+    savedListEl.appendChild(el("li", { class: "place-placeholder", text: "Inga platser markerade ännu." }));
+  } else {
+    wantedItems.forEach((p) => savedListEl.appendChild(placeCard(p)));
+  }
+
+  savedListEl.appendChild(el("li", { class: "saved-group-title", text: "✓ Besökta" }));
+  if (visitedItems.length === 0) {
+    savedListEl.appendChild(el("li", { class: "place-placeholder", text: "Inga besökta platser ännu." }));
+  } else {
+    visitedItems.forEach((p) => savedListEl.appendChild(placeCard(p)));
+  }
 }
 
 function renderHeroStats(visibleItems) {
   heroTotalEl.textContent = String(state.places.length);
   heroVisibleEl.textContent = String(visibleItems.length);
-  heroSavedEl.textContent = String(state.favorites.size);
+  heroSavedEl.textContent = String(state.favorites.size + state.visited.size);
 }
 
 function setActiveTab(tabKey) {
@@ -399,7 +473,7 @@ function setActiveTab(tabKey) {
 
   if (tabKey === "sparade") {
     renderSavedList();
-    renderMarkers(state.places.filter((p) => state.favorites.has(p.id)));
+    renderMarkers(state.places.filter((p) => state.favorites.has(p.id) || state.visited.has(p.id)));
     setTimeout(() => map.invalidateSize(), 80);
     return;
   }
@@ -550,7 +624,8 @@ function openDetail(id) {
   const distance = state.userLatLng
     ? distanceMeters(state.userLatLng, [p.lat, p.lng])
     : null;
-  const isFav = state.favorites.has(p.id);
+  const isWanted = state.favorites.has(p.id);
+  const isVisited = state.visited.has(p.id);
 
   const badge = el("span", { class: "detail-badge" }, [
     `${cat?.emoji || "📍"} ${cat?.label || p.category}`,
@@ -562,9 +637,20 @@ function openDetail(id) {
   const favBtn = el("button", {
     type: "button",
     class: "btn",
-    text: isFav ? "♥ Sparad" : "♡ Spara",
+    text: isWanted ? "♥ Vill besöka" : "♡ Vill besöka",
     onClick: () => {
       toggleFavorite(p.id);
+      openDetail(p.id); // rita om panelen
+      render();
+    },
+  });
+
+  const visitedBtn = el("button", {
+    type: "button",
+    class: "btn",
+    text: isVisited ? "✓ Besökt" : "✓ Markera besökt",
+    onClick: () => {
+      toggleVisited(p.id);
       openDetail(p.id); // rita om panelen
       render();
     },
@@ -612,6 +698,8 @@ function openDetail(id) {
       class: "detail-distance",
       text: distance != null ? `${formatDistance(distance)} från din position` : "Position okänd",
     }),
+    ...(isWanted ? [el("p", { class: "detail-status detail-status-wanted", text: "På din vill-besöka-lista" })] : []),
+    ...(isVisited ? [el("p", { class: "detail-status detail-status-visited", text: "Markerad som besökt" })] : []),
     el("p", { class: "detail-desc", text: p.description }),
     ...(factItems.length > 0 ? [el("dl", { class: "detail-facts" }, factItems)] : []),
     ...(contactItems.length > 0 ? [el("div", { class: "detail-contact" }, contactItems)] : []),
@@ -627,6 +715,7 @@ function openDetail(id) {
         ["🧭 Vägbeskrivning"]
       ),
       favBtn,
+      visitedBtn,
     ])
   );
 
@@ -672,7 +761,8 @@ function renderFilterBar() {
   );
   const chips = [
     ["all", { label: "Alla", emoji: "📍" }],
-    ["favorites", { label: "Sparade", emoji: "♥" }],
+    ["favorites", { label: "Vill besöka", emoji: "♥" }],
+    ["visited", { label: "Besökta", emoji: "✓" }],
     ...Object.entries(CATEGORIES).filter(([key]) => availableCategories.has(key)),
   ];
 
