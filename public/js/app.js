@@ -82,6 +82,8 @@ const quickNearbyBtn = document.getElementById("quick-nearby");
 const quickFoodBtn = document.getElementById("quick-food");
 const quickBeachBtn = document.getElementById("quick-beach");
 const quickRandomBtn = document.getElementById("quick-random");
+const buildRouteBtn = document.getElementById("build-route");
+const routeListEl = document.getElementById("route-list");
 
 function setStatus(message, stateClass) {
   statusEl.textContent = message;
@@ -419,6 +421,76 @@ function jumpToRandomPlace() {
   openDetail(pick.id);
 }
 
+function renderRoute(items) {
+  routeListEl.replaceChildren();
+
+  if (items.length === 0) {
+    routeListEl.appendChild(
+      el("li", {
+        class: "place-placeholder",
+        text: "Hittade ingen rutt just nu. Testa att byta filter i Upptäck.",
+      })
+    );
+    return;
+  }
+
+  items.forEach((p, idx) => {
+    const cat = CATEGORIES[p.category];
+    const meta = state.userLatLng && p.distance != null ? `${formatDistance(p.distance)} bort` : cat?.label || p.category;
+
+    const item = el("li", { class: "route-item" }, [
+      el("div", {}, [
+        el("h4", { text: `${idx + 1}. ${p.name}` }),
+        el("p", { text: `${cat?.emoji || "📍"} ${meta}` }),
+      ]),
+      el("button", {
+        type: "button",
+        class: "route-go",
+        text: "Öppna",
+        onClick: () => {
+          setActiveTab("upptack");
+          openDetail(p.id);
+        },
+      }),
+    ]);
+
+    routeListEl.appendChild(item);
+  });
+}
+
+function buildMiniRoute() {
+  let items = state.places.map((p) => ({
+    ...p,
+    distance: state.userLatLng ? distanceMeters(state.userLatLng, [p.lat, p.lng]) : null,
+  }));
+
+  if (state.userLatLng) {
+    items.sort((a, b) => a.distance - b.distance);
+  } else {
+    items.sort((a, b) => a.name.localeCompare(b.name, "sv"));
+  }
+
+  const route = [];
+  const usedCategories = new Set();
+  for (const p of items) {
+    if (!usedCategories.has(p.category)) {
+      route.push(p);
+      usedCategories.add(p.category);
+    }
+    if (route.length === 3) break;
+  }
+
+  if (route.length < 3) {
+    for (const p of items) {
+      if (route.find((x) => x.id === p.id)) continue;
+      route.push(p);
+      if (route.length === 3) break;
+    }
+  }
+
+  renderRoute(route);
+}
+
 // ---------------------------------------------------------------------------
 // Detaljvy
 // ---------------------------------------------------------------------------
@@ -633,6 +705,8 @@ quickRandomBtn.addEventListener("click", () => {
   setActiveTab("upptack");
   jumpToRandomPlace();
 });
+
+buildRouteBtn.addEventListener("click", buildMiniRoute);
 
 locateBtn.addEventListener("click", () => {
   if (state.userLatLng) {
