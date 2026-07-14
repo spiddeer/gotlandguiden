@@ -10,6 +10,8 @@ Denna runbook beskriver den faktiska produktionssetupen och hur den driftas.
 - Exponerad port i CT 201: `3003`
 - Publik doman: `https://gotland.tobtech.se`
 - Cloudflare Tunnel konfigurerad i separat CT 200
+- Senaste kodbas fore denna dokumentuppdatering: `5869c3a`
+- Datastatus: 1 345 aktiva och 17 inaktiva historiska platser i 10 kategorier
 
 ## Topologi
 
@@ -23,6 +25,11 @@ Backend kor additiva databasmigreringar automatiskt vid start. Seed-steget
 anvander `UPSERT`, sa befintlig berikning bevaras nar OSM-snapshoten importeras igen.
 Tidigare OSM-poster som saknas i den nya snapshoten markeras inaktiva men ligger
 kvar i SQLite for historik och eventuell manuell berikning.
+
+Fyra migreringar ar aktiva. Migrering 4 kallmarker importerade
+kategorikopplingar, sa nya OSM-snapshots kan synka just de kopplingarna utan att
+ta bort manuellt tillagda kategorier. Publika API-anrop visar bara
+`is_active = 1` medan inaktiva poster behalls i databasen.
 
 ## Kataloger i CT 201
 
@@ -44,6 +51,13 @@ cd /opt/gotlandsguiden
 1. `git pull --ff-only`
 2. `docker-compose -f deploy/proxmox/docker-compose.yml up -d --build`
 3. visar `docker-compose ps`
+
+Kontrollera fore deploy att `main` ar pushad och att backendtesterna passerar:
+
+```bash
+cd /opt/gotlandsguiden/backend
+npm test
+```
 
 ## Grundinstallation (om ny CT byggs)
 
@@ -133,8 +147,19 @@ docker-compose -f /opt/gotlandsguiden/deploy/proxmox/docker-compose.yml ps
 ### Kontrollera publik doman
 
 ```bash
-curl -IksS https://gotland.tobtech.se
-curl -skS https://gotland.tobtech.se/api/places | head
+curl -fsSI https://gotland.tobtech.se
+curl -fsS https://gotland.tobtech.se/api/categories
+curl -fsS https://gotland.tobtech.se/api/places | head
+```
+
+### Verifiera release och databas i CT 201
+
+```bash
+cd /opt/gotlandsguiden
+git rev-parse HEAD
+docker-compose -f deploy/proxmox/docker-compose.yml ps
+docker-compose -f deploy/proxmox/docker-compose.yml exec backend node -e \
+  "const { db } = require('./db'); console.log({ migrations: db.prepare('SELECT COUNT(*) count FROM schema_migrations').get().count, active: db.prepare('SELECT COUNT(*) count FROM places WHERE is_active = 1').get().count, inactive: db.prepare('SELECT COUNT(*) count FROM places WHERE is_active = 0').get().count });"
 ```
 
 ### Vanliga problem
@@ -148,3 +173,5 @@ curl -skS https://gotland.tobtech.se/api/places | head
 1. Committa aldrig runtime-data i `deploy/proxmox/data/` eller `deploy/proxmox/backups/`.
 2. Hall deploy via `deploy.sh` for konsekvent drift.
 3. Vid andrad infra/topologi: uppdatera denna fil, `AGENTS.md` och `.github/hooks/README.md`.
+4. Kor aldrig seed/import utan att behalla backup och manuellt berikade falt.
+5. Verifiera Git-SHA, containerstatus och publikt webb/API separat efter deploy.

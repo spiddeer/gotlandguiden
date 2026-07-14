@@ -2,6 +2,8 @@
 
 En mobilforst webbapp for att hitta platser pa Gotland med karta, sok, filtrering och favoriter.
 
+Dokumentationen ar avstamd mot kodbasen och commit `5869c3a` den 14 juli 2026.
+
 ## Live
 
 - Produktion: https://gotland.tobtech.se
@@ -12,7 +14,7 @@ Gotlandsguiden ar en platsguide som kombinerar:
 
 - Interaktiv karta (Leaflet)
 - Sokning och kategorifilter
-- Favoriter i webblasaren
+- Personliga listor for platser att besoka och redan besokta platser
 - Detaljvy for varje plats
 - Backend-API for lasning/skapande av platser
 - Driftbar setup i Proxmox med Docker Compose, backup och Cloudflare-routing
@@ -23,7 +25,11 @@ Gotlandsguiden ar en platsguide som kombinerar:
 - Filter for tillgangliga kategorier, inklusive boende, aktiviteter, natur och service
 - Sokruta over namn, beskrivning, adress och kategori
 - Geolokalisering och avstandsvisning
-- Favoriter via localStorage
+- “Vill besoka” och “Besokta” via localStorage
+- Flikarna Upptack, Sparade och Guide
+- Snabbval for narheten, mat, strander och ett slumpat tips
+- Enkel ruttbyggare fran “Vill besoka”-listan
+- Adress, kontaktuppgifter och oppettider nar kallan innehaller dem
 - Light/dark mode
 - Marker clustering for battre prestanda med manga platser
 
@@ -60,6 +66,7 @@ backend/
   seed-data.json
   Dockerfile
   package.json
+  test/
 
 public/
   index.html
@@ -161,6 +168,8 @@ inbyggda OpenStreetMap-snapshoten anvands bara som fallback i frontend-only-lage
   oppettider nar de finns i kallan. Manuellt berikade falt skrivs inte tomma.
 - OSM-poster som inte langre finns i aktuell snapshot markeras inaktiva i stallet
   for att raderas, sa manuell historik och berikning bevaras.
+- Importagda kategorikopplingar synkas mot aktuell snapshot. Manuellt tillagda
+  kategorikopplingar lamnas ororda via `source_type` fran migrering 4.
 - Varje import loggas i tabellen `import_runs`.
 - Oppettider kan lagras bade som kallans originaltext och som strukturerade
   veckotider med datumundantag.
@@ -179,6 +188,36 @@ upp Overpass-fragan i mindre batchar, deduplicerar samma plats inom 250 meter
 och skriver bade `backend/seed-data.json` och frontendens fallback-snapshot.
 Varje plats kallsparas till sitt OpenStreetMap-objekt. Aktuell snapshot innehaller
 1 345 platser fordelade over samtliga tio kategorier.
+
+## Aktuell dataproduktion
+
+Produktionsdatabasen innehaller vid senaste kontrollen:
+
+- 1 345 aktiva platser och 17 inaktiva historiska platser
+- 10 kategorier och 4 applicerade databasmigreringar
+- 165 platser med oppettider
+- 131 platser med adress
+- 250 platser med minst en kontaktuppgift
+
+SQLite ar kallan i drift. `backend/seed-data.json` och
+`public/js/places-data.js` versionsstyrs for reproducerbar seed respektive
+frontend-fallback, men ersatter inte produktionsdatabasen.
+
+## Verifiering
+
+Backendens migrations-, API- och importtester kors fran `backend/`:
+
+```bash
+npm test
+```
+
+Efter deploy ska bade webb och API verifieras:
+
+```bash
+curl -fsSI https://gotland.tobtech.se
+curl -fsS https://gotland.tobtech.se/api/categories
+curl -fsS https://gotland.tobtech.se/api/places
+```
 
 ## Kora lokalt (snabbstart)
 
@@ -202,6 +241,8 @@ Nuvarande produktion kor i Proxmox med separat app-container och Cloudflare edge
 
 - App-runbook: [deploy/proxmox/README.md](deploy/proxmox/README.md)
 - Agentkontext: [AGENTS.md](AGENTS.md)
+- Designkontrakt: [DESIGN.md](DESIGN.md)
+- Claude/IJFW-kontext: [CLAUDE.md](CLAUDE.md)
 - Hook-dokumentation: [.github/hooks/README.md](.github/hooks/README.md)
 
 ## Deployflode

@@ -1,3 +1,21 @@
+---
+ijfw_version: 1.3.2
+ijfw_schema: 1
+type: software
+primary_type: software
+secondary_types: []
+confidence: 0.907
+detected_at: 2026-07-14T14:18:18.951Z
+signals:
+  - kind: manifest
+    weight: 0.9
+    manifests: [package.json]
+  - kind: file_extension_ratio
+    weight: 0.7
+    domain: software
+    ratio: 1
+    count: 5
+---
 # Gotlandsguiden - Agent Instructions
 
 Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
@@ -11,6 +29,8 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
 - Publik doman: `https://gotland.tobtech.se`
 - Edge-routing: Cloudflare Tunnel (konfig i separat CT 200)
 - Git remote: `https://github.com/spiddeer/gotlandguiden.git`
+- Produktionssnapshot: 1 345 aktiva platser, 17 inaktiva historiska platser,
+  10 kategorier och 4 databasmigreringar (verifierat 2026-07-14)
 
 ## Arkitektur
 
@@ -34,8 +54,11 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
 - `backend/db.js`: SQLite-anslutning och migreringsstart.
 - `backend/migrations.js`: Versionsstyrda, additiva SQLite-migreringar.
 - `backend/place-repository.js`: Datakontrakt, relationslasning och skrivning.
+- `backend/import-osm.js`: Overpass-import, kategorisering, deduplicering och
+  generering av seed- samt fallback-snapshot.
 - `backend/seed.js`: Idempotent OSM-import vid containerstart.
 - `backend/seed-data.json`: Seed-dataset.
+- `backend/test/`: Tester for API, migreringar/databas och OSM-import.
 
 ## State & Rendering-kontrakt
 
@@ -47,10 +70,16 @@ Aktuell state-nycklar:
 - `userLatLng`
 - `activeCategory`
 - `query`
-- `favorites`
+- `favorites` (platser markerade “Vill besoka”)
+- `visited`
 - `selectedId`
+- `activeTab`
 
 Bryt inte detta monster utan bra skal.
+
+De personliga listorna lagras lokalt i webblasaren: `gg_favorites` for
+“Vill besoka” och `gg_visited` for “Besokta”. De ar frontend-state och ingar
+inte i SQLite eller API-kontraktet.
 
 ## Data-kontrakt
 
@@ -70,6 +99,14 @@ bara anvandas nar API:t inte ar tillgangligt, exempelvis frontend-only-lage.
 
 Seed/import far uppdatera karndata med `UPSERT`, men aldrig radera manuellt
 berikade oppettider, kontaktuppgifter, bilder eller kallor.
+
+Importagda kategorikopplingar har `source_type = 'OpenStreetMap'` och far
+synkas bort nar kallan andras. Manuella kategorikopplingar saknar den
+kallmarkningen och ska bevaras. Poster som forsvinner ur OSM markeras med
+`is_active = 0`; publika lasningar returnerar endast aktiva poster.
+
+Aktuell seed och frontend-fallback ska alltid genereras av samma importkorning.
+Andra inte den ena snapshoten utan att synka och testa den andra.
 
 ## Drift och infrastruktur
 
@@ -111,6 +148,20 @@ systemctl status gotlandsguiden-backup.timer
 systemctl list-timers --all | grep gotlandsguiden-backup
 ```
 
+Lokal verifiering fran `backend/`:
+
+```bash
+npm test
+```
+
+Efter deploy:
+
+```bash
+curl -fsSI https://gotland.tobtech.se
+curl -fsS https://gotland.tobtech.se/api/categories
+curl -fsS https://gotland.tobtech.se/api/places
+```
+
 ## AI-agent policy (viktigt)
 
 1. Andra aldrig API-schemat utan att uppdatera frontend + seed + docs.
@@ -119,6 +170,8 @@ systemctl list-timers --all | grep gotlandsguiden-backup
 4. Anvand befintligt deployscript i stallet for ad-hoc deploykommando.
 5. Om Cloudflare-routing andras: dokumentera ny ingress i denna fil och i `deploy/proxmox/README.md`.
 6. Vid nya driftsattningssteg: uppdatera samtliga markdownfiler i repot.
+7. Kor backendtester efter andringar i schema, repository, seed eller import.
+8. Hall `backend/seed-data.json` och `public/js/places-data.js` synkroniserade.
 
 ## Snabb felsokning
 
@@ -130,4 +183,15 @@ systemctl list-timers --all | grep gotlandsguiden-backup
 ## Relaterad dokumentation
 
 - `deploy/proxmox/README.md`: drift/runbook
+- `README.md`: produktoversikt, API och datastatus
+- `DESIGN.md`: visuellt och interaktivt designkontrakt
+- `CLAUDE.md`: kort projektkontext och IJFW-hanvisningar
 - `.github/hooks/README.md`: hooksystem och kvalitetsregler
+
+<!-- IJFW-MEMORY-START -->
+Project memory at .ijfw/memory/. Call `ijfw_memory_prelude` for full context.
+<!-- IJFW-MEMORY-END -->
+
+<!-- IJFW-AGENTS-START -->
+No project agents yet. Run `ijfw team` to set them up.
+<!-- IJFW-AGENTS-END -->

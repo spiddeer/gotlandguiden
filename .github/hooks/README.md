@@ -6,15 +6,21 @@ Detta dokument forklarar hur hooks i `.github/hooks` hjalper AI-tjanster och utv
 
 Hooks ska minska regressionsrisk i tre kritiska ytor:
 
-1. Datakvalitet i `public/js/places-data.js`
+1. Fallback-datakvalitet i `public/js/places-data.js`
 2. State/render-disciplin i `public/js/app.js`
 3. Frontendkvalitet i `public/index.html` och `public/css/style.css`
+
+Hooks ar snabba redigeringskontroller, inte en full CI-svit. De bevakar inte
+`backend/seed-data.json`, `backend/import-osm.js`, databasmigreringar eller API:t.
+Dessa ytor verifieras med backendtesterna och de manuella datakontrollerna nedan.
 
 ## Aktiva hookfiler
 
 ### `data-validation.json`
 
-Validerar platsdata-schema, kategori-nycklar och koordinater.
+Kors fore och efter redigering av `**/places-data.js`. Efterkontrollen verifierar
+grundschema och att `CATEGORIES` finns. Hookens namn beskriver ett bredare mal,
+men nuvarande kommando gor ingen full koordinat- eller dubblettkontroll.
 
 Skyddar mot:
 
@@ -54,7 +60,8 @@ Skyddar mot:
 
 ### `category-consistency.json`
 
-Verifierar att alla kategorier ar konsistenta mellan definition och anvandning.
+Kors efter redigering av `**/places-data.js` och jamfor definierade kategorier
+med kategorier som anvands i fallback-datasetet.
 
 Skyddar mot:
 
@@ -72,8 +79,32 @@ Skyddar mot:
 
 1. Vid andring i `public/js/places-data.js`: kontrollera kategorier och schema.
 2. Vid andring i `public/js/app.js`: kontrollera att state-forandringar foljs av `render()`.
+   Bevara aven de separata listorna `favorites`/`gg_favorites` (“Vill besoka”)
+   och `visited`/`gg_visited` (“Besokta”).
 3. Vid andring i `public/css/style.css`: behall variabelbaserad design och mobilforst-beteende.
 4. Vid andring i `public/index.html`: behall semantik och ARIA-kvalitet.
+5. Vid andring i `backend/seed-data.json` eller `backend/import-osm.js`: kor
+   `npm test` i `backend/` och verifiera att frontend-fallbacken genererats av
+   samma importkorning.
+6. Vid andring i kategorier: verifiera SQLite-kategorier, seedens primara och
+   sekundara kategorier samt `CATEGORIES` i fallbacken.
+
+## Backend- och datasynkronisering
+
+SQLite ar produktionskallan. Importflodet skriver bade
+`backend/seed-data.json` och fallback-snapshoten i
+`public/js/places-data.js`. Kategorikopplingar fran OpenStreetMap ar
+kallmarkerade och far synkas; manuella kopplingar och berikningsfalt ska
+bevaras.
+
+Kor fran `backend/` efter data-, import-, schema- eller API-andringar:
+
+```bash
+npm test
+```
+
+Testsviten omfattar API, databas/migreringar och importlogik. Hookarna kompletterar
+testerna med snabb feedback under frontendredigering men ersatter dem inte.
 
 ## Vanliga felbilder
 
@@ -105,4 +136,6 @@ Effekt: designen blir inkonsekvent mellan ljust/morkt lage.
 ## Relaterade dokument
 
 - `AGENTS.md`
+- `README.md`
+- `DESIGN.md`
 - `deploy/proxmox/README.md`

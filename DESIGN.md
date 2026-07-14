@@ -1,5 +1,8 @@
 # Gotlandsguiden Design System
 
+Status: implemented and reviewed against the production UI on 2026-07-14.
+This document is the design contract for future interface changes.
+
 ## 1. Product Character
 
 Gotlandsguiden is a calm, practical travel companion for exploring the island.
@@ -118,6 +121,13 @@ mostly opaque surfaces so text remains readable over every map position.
 
 ## 8. Components
 
+The current production surface includes the Upptack, Sparade, and Guide tabs;
+separate Vill besoka and Besokta lists; horizontal category chips; nearby,
+food, beach, and random quick actions; a route builder based on Vill besoka;
+and rich place details for address, contact data, opening hours, sources, and
+verification dates when available. Extend these patterns before introducing a
+parallel navigation or component system.
+
 ### Search
 
 Search is the strongest control in the panel. Use a visible search icon, a
@@ -138,7 +148,8 @@ support scanning; do not add emoji to every sentence or heading.
 
 ### Place cards
 
-Cards prioritize name, short description, category, distance, and save action.
+Cards prioritize name, short description, category, distance, and the separate
+Vill besoka and Besokta actions.
 Use the category color as a small accent only. Hover, focus, and selected states
 must be distinct. Truncate long descriptions only when the complete text is
 available in the detail view.
