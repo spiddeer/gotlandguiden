@@ -19,6 +19,9 @@ Denna runbook beskriver den faktiska produktionssetupen och hur den driftas.
 4. `web` proxyar `/api/*` till `backend:8080`.
 5. `backend` anvander SQLite i `deploy/proxmox/data/places.db`.
 
+Backend kor additiva databasmigreringar automatiskt vid start. Seed-steget
+anvander `UPSERT`, sa befintlig berikning bevaras nar OSM-snapshoten importeras igen.
+
 ## Kataloger i CT 201
 
 - Projektroot: `/opt/gotlandsguiden`
@@ -87,6 +90,9 @@ systemctl status gotlandsguiden.service
 ```
 
 ## Backup
+
+Kor en manuell backup innan en release som innehaller nya migreringar. Runtime-
+databasen ligger utanfor Git och ska inte ersattas med `seed-data.json`.
 
 ### Manuell backup
 

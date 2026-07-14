@@ -4,11 +4,8 @@
    PLATSERNA NEDAN ÄR HÄMTADE FRÅN OpenStreetMap (Overpass API) för Gotland.
    © OpenStreetMap-bidragsgivare (ODbL). Data hämtad 2026-07-14.
 
-   loadPlaces() returnerar datan som ett Promise. När du har ett eget API
-   byter du bara ut kroppen mot t.ex.:
-
-     const res = await fetch("/api/places");
-     return await res.json();
+   loadPlaces() använder API:t som primär källa och faller tillbaka på den
+   inbyggda snapshoten när frontend körs fristående.
 
    Datamodell per plats:
      { id, name, category, lat, lng, description }
@@ -20,6 +17,12 @@ const CATEGORIES = {
   sevardhet:  { label: "Sevärdheter", color: "#e0a458", emoji: "\uD83C\uDFDB\uFE0F" },
   mat:        { label: "Mat & dryck", color: "#c0603f", emoji: "\uD83C\uDF7D\uFE0F" },
   smultronstallen: { label: "Smultronställen", color: "#60a074", emoji: "\uD83C\uDF3F" },
+  boende:     { label: "Boende", color: "#7667a8", emoji: "\uD83D\uDECF\uFE0F" },
+  aktivitet:  { label: "Aktiviteter", color: "#d1764f", emoji: "\uD83D\uDEB2" },
+  natur:      { label: "Natur & friluftsliv", color: "#4f8661", emoji: "\uD83C\uDF32" },
+  shopping:   { label: "Butiker & gårdsbutiker", color: "#aa6c84", emoji: "\uD83D\uDECD\uFE0F" },
+  familj:     { label: "För familjen", color: "#bd7f2f", emoji: "\uD83E\uDDF8" },
+  service:    { label: "Service", color: "#607d8b", emoji: "\u2139\uFE0F" },
 };
 
 // Genererad från OpenStreetMap. Redigera fritt eller ersätt via API.
@@ -612,8 +615,31 @@ const MOCK_PLACES = [
  * när det senare byts mot ett riktigt API-anrop.
  * @returns {Promise<Array>}
  */
-function loadPlaces() {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(MOCK_PLACES), 100);
-  });
+async function loadCategories() {
+  try {
+    const response = await fetch("/api/categories", { headers: { Accept: "application/json" } });
+    if (!response.ok) return;
+    const categories = await response.json();
+    for (const category of categories) {
+      CATEGORIES[category.id] = {
+        label: category.label,
+        color: category.color,
+        emoji: category.emoji,
+      };
+    }
+  } catch (error) {
+    // Den inbyggda kategorilistan används för frontend-only-läge.
+  }
+}
+
+async function loadPlaces() {
+  try {
+    const response = await fetch("/api/places", { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("API unavailable");
+    const places = await response.json();
+    if (!Array.isArray(places)) throw new Error("Unexpected API response");
+    return places;
+  } catch (error) {
+    return MOCK_PLACES;
+  }
 }

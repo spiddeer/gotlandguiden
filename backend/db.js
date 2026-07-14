@@ -1,22 +1,25 @@
 const path = require("path");
 const fs = require("fs");
 const Database = require("better-sqlite3");
+const { runMigrations } = require("./migrations");
+const { ensureCategories } = require("./place-repository");
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, "data", "places.db");
-fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+const DEFAULT_DB_PATH = process.env.DB_PATH || path.join(__dirname, "data", "places.db");
 
-const db = new Database(DB_PATH);
-db.pragma("journal_mode = WAL");
+function openDatabase(dbPath = DEFAULT_DB_PATH) {
+  if (dbPath !== ":memory:") {
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  }
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS places (
-    id          TEXT PRIMARY KEY,
-    name        TEXT NOT NULL,
-    category    TEXT NOT NULL,
-    lat         REAL NOT NULL,
-    lng         REAL NOT NULL,
-    description TEXT
-  );
-`);
+  const database = new Database(dbPath);
+  database.pragma("journal_mode = WAL");
+  database.pragma("foreign_keys = ON");
+  database.pragma("busy_timeout = 5000");
+  runMigrations(database);
+  ensureCategories(database);
+  return database;
+}
 
-module.exports = db;
+const db = openDatabase();
+
+module.exports = { db, openDatabase };

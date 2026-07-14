@@ -26,13 +26,15 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
 - `public/index.html`: Struktur, Leaflet/cluster script includes.
 - `public/css/style.css`: Mobil-forst, modern UI, dark mode, detaljpanel.
 - `public/js/app.js`: State, rendering, filter, favorites, geolocation, detail sheet.
-- `public/js/places-data.js`: Kategorier + fallback/mock-dataset.
+- `public/js/places-data.js`: API-first laddning, kategorier + fallback-dataset.
 
 ### Backendfiler
 
-- `backend/server.js`: API-endpoints (`GET /api/places`, `POST /api/places`).
-- `backend/db.js`: SQLite init + schema.
-- `backend/seed.js`: Seed vid containerstart.
+- `backend/server.js`: Las- och skriv-API for kategorier och platser.
+- `backend/db.js`: SQLite-anslutning och migreringsstart.
+- `backend/migrations.js`: Versionsstyrda, additiva SQLite-migreringar.
+- `backend/place-repository.js`: Datakontrakt, relationslasning och skrivning.
+- `backend/seed.js`: Idempotent OSM-import vid containerstart.
 - `backend/seed-data.json`: Seed-dataset.
 
 ## State & Rendering-kontrakt
@@ -52,11 +54,22 @@ Bryt inte detta monster utan bra skal.
 
 ## Data-kontrakt
 
-Platsobjekt ska alltid vara:
+Platsobjektets bakatkompatibla karna ska alltid vara:
 
 `{ id, name, category, lat, lng, description }`
 
-Kategori-nycklar maste finnas i `CATEGORIES` i `public/js/places-data.js`.
+Valfria berikningsfalt ar `categories`, `address`, `contacts`, `openingHours`,
+`accessibility`, `priceLevel`, `images`, `sources` och `lastVerifiedAt`.
+
+En plats kan tillhora flera kategorier, men `category` ar alltid primar kategori.
+Kategori-nycklar maste finnas i bade SQLite-tabellen `categories` och fallbacken
+`CATEGORIES` i `public/js/places-data.js`.
+
+Frontend ska lasa `/api/categories` och `/api/places`. Fallback-datasetet far
+bara anvandas nar API:t inte ar tillgangligt, exempelvis frontend-only-lage.
+
+Seed/import far uppdatera karndata med `UPSERT`, men aldrig radera manuellt
+berikade oppettider, kontaktuppgifter, bilder eller kallor.
 
 ## Drift och infrastruktur
 

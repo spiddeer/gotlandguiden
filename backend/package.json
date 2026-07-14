@@ -6,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "seed": "node seed.js"
+    "seed": "node seed.js",
+    "test": "DB_PATH=:memory: node --test test/*.test.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",

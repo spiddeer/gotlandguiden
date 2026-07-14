@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-COPY db.js seed.js server.js seed-data.json ./
+COPY db.js migrations.js place-repository.js seed.js server.js seed-data.json ./
 
 ENV PORT=8080
 ENV DB_PATH=/data/places.db

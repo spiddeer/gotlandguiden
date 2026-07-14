@@ -1,13 +1,14 @@
 const express = require("express");
-const db = require("./db");
+const { db } = require("./db");
+const {
+  getPlace,
+  listCategories,
+  listPlaces,
+  savePlace,
+} = require("./place-repository");
 
 const PORT = process.env.PORT || 8080;
 const API_KEY = process.env.API_KEY || "";
-
-const app = express();
-app.use(express.json());
-
-const VALID_CATEGORIES = new Set(["strand", "sevardhet", "mat", "smultronstallen"]);
 
 function slugify(text) {
   return text
@@ -18,50 +19,127 @@ function slugify(text) {
     .replace(/(^-|-$)/g, "");
 }
 
-app.get("/api/places", (req, res) => {
-  const places = db.prepare("SELECT id, name, category, lat, lng, description FROM places ORDER BY name").all();
-  res.json(places);
-});
-
-function requireApiKey(req, res, next) {
-  if (!API_KEY) return next(); // no key configured yet -> endpoint open, per current requirements
-  if (req.get("X-API-Key") !== API_KEY) {
-    return res.status(401).json({ error: "Invalid or missing API key." });
-  }
-  next();
+function createUniqueId(database, name) {
+  const base = slugify(name) || "plats";
+  const exists = database.prepare("SELECT 1 FROM places WHERE id = ?");
+  let candidate = base;
+  let suffix = 1;
+  while (exists.get(candidate)) candidate = `${base}-${++suffix}`;
+  return candidate;
 }
 
-app.post("/api/places", requireApiKey, (req, res) => {
-  const { name, category, lat, lng, description } = req.body || {};
+function validatePlaceInput(database, input, { partial = false } = {}) {
+  const errors = [];
+  const categories = new Set(listCategories(database).map((category) => category.id));
 
-  if (typeof name !== "string" || !name.trim()) {
-    return res.status(400).json({ error: "name is required." });
+  if (!partial || Object.hasOwn(input, "name")) {
+    if (typeof input.name !== "string" || !input.name.trim()) errors.push("name is required");
   }
-  if (!VALID_CATEGORIES.has(category)) {
-    return res.status(400).json({ error: `category must be one of: ${[...VALID_CATEGORIES].join(", ")}` });
+  if (!partial || Object.hasOwn(input, "category")) {
+    if (!categories.has(input.category)) errors.push(`category must be one of: ${[...categories].join(", ")}`);
   }
-  if (typeof lat !== "number" || typeof lng !== "number") {
-    return res.status(400).json({ error: "lat and lng must be numbers." });
+  if (!partial || Object.hasOwn(input, "lat")) {
+    if (typeof input.lat !== "number" || input.lat < -90 || input.lat > 90) {
+      errors.push("lat must be a number between -90 and 90");
+    }
+  }
+  if (!partial || Object.hasOwn(input, "lng")) {
+    if (typeof input.lng !== "number" || input.lng < -180 || input.lng > 180) {
+      errors.push("lng must be a number between -180 and 180");
+    }
+  }
+  if (input.categories) {
+    if (!Array.isArray(input.categories)) errors.push("categories must be an array");
+    else {
+      for (const category of input.categories) {
+        if (!categories.has(category)) errors.push(`unknown category: ${category}`);
+      }
+    }
+  }
+  if (input.priceLevel != null && ![1, 2, 3, 4].includes(input.priceLevel)) {
+    errors.push("priceLevel must be between 1 and 4");
+  }
+  for (const hours of input.openingHours?.weekly || []) {
+    if (!Number.isInteger(hours.dayOfWeek) || hours.dayOfWeek < 0 || hours.dayOfWeek > 6) {
+      errors.push("openingHours.weekly.dayOfWeek must be between 0 and 6");
+    }
+  }
+  return errors;
+}
+
+function createApp(database = db, { apiKey = API_KEY } = {}) {
+  const app = express();
+  app.disable("x-powered-by");
+  app.use(express.json({ limit: "256kb" }));
+
+  function requireApiKey(req, res, next) {
+    if (!apiKey) {
+      return res.status(503).json({ error: "API writes are not configured." });
+    }
+    if (req.get("X-API-Key") !== apiKey) {
+      return res.status(401).json({ error: "Invalid or missing API key." });
+    }
+    next();
   }
 
-  let id = slugify(name);
-  if (!id) id = "plats";
-  const exists = db.prepare("SELECT 1 FROM places WHERE id = ?");
-  let candidate = id;
-  let suffix = 1;
-  while (exists.get(candidate)) {
-    candidate = `${id}-${++suffix}`;
-  }
-  id = candidate;
+  app.get("/api/categories", (req, res) => {
+    res.json(listCategories(database));
+  });
 
-  db.prepare(
-    "INSERT INTO places (id, name, category, lat, lng, description) VALUES (?, ?, ?, ?, ?, ?)"
-  ).run(id, name.trim(), category, lat, lng, description || null);
+  app.get("/api/places", (req, res) => {
+    res.json(listPlaces(database));
+  });
 
-  const place = db.prepare("SELECT id, name, category, lat, lng, description FROM places WHERE id = ?").get(id);
-  res.status(201).json(place);
-});
+  app.get("/api/places/:id", (req, res) => {
+    const place = getPlace(database, req.params.id);
+    if (!place) return res.status(404).json({ error: "Place not found." });
+    res.json(place);
+  });
 
-app.listen(PORT, () => {
-  console.log(`Gotlandsguiden API listening on port ${PORT}`);
-});
+  app.post("/api/places", requireApiKey, (req, res) => {
+    const input = req.body || {};
+    const errors = validatePlaceInput(database, input);
+    if (errors.length) return res.status(400).json({ errors });
+
+    const id = typeof input.id === "string" && input.id.trim()
+      ? input.id.trim()
+      : createUniqueId(database, input.name);
+    try {
+      const place = savePlace(database, {
+        ...input,
+        id,
+        name: input.name.trim(),
+        description: input.description || "",
+      }, { create: true });
+      res.status(201).json(place);
+    } catch (error) {
+      if (error.message === "Place already exists") {
+        return res.status(409).json({ error: error.message });
+      }
+      throw error;
+    }
+  });
+
+  app.patch("/api/places/:id", requireApiKey, (req, res) => {
+    const input = req.body || {};
+    const errors = validatePlaceInput(database, input, { partial: true });
+    if (errors.length) return res.status(400).json({ errors });
+    const place = savePlace(database, { ...input, id: req.params.id });
+    if (!place) return res.status(404).json({ error: "Place not found." });
+    res.json(place);
+  });
+
+  app.use((error, req, res, next) => {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error." });
+  });
+  return app;
+}
+
+if (require.main === module) {
+  createApp().listen(PORT, () => {
+    console.log(`Gotlandsguiden API listening on port ${PORT}`);
+  });
+}
+
+module.exports = { createApp, createUniqueId, validatePlaceInput };

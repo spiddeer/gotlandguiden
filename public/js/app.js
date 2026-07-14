@@ -213,15 +213,21 @@ function visiblePlaces() {
   if (state.activeCategory === "favorites") {
     items = items.filter((p) => state.favorites.has(p.id));
   } else if (state.activeCategory !== "all") {
-    items = items.filter((p) => p.category === state.activeCategory);
+    items = items.filter((p) =>
+      (Array.isArray(p.categories) ? p.categories : [p.category]).includes(state.activeCategory)
+    );
   }
 
   if (q) {
-    items = items.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q)
-    );
+    items = items.filter((p) => {
+      const searchable = [
+        p.name,
+        p.description,
+        p.address?.formatted,
+        ...(p.categories || []).map((category) => CATEGORIES[category]?.label),
+      ].filter(Boolean).join(" ").toLowerCase();
+      return searchable.includes(q);
+    });
   }
 
   if (state.userLatLng) items.sort((a, b) => a.distance - b.distance);
@@ -504,6 +510,37 @@ function buildMiniRoute() {
 // Detaljvy
 // ---------------------------------------------------------------------------
 
+function openingHoursSummary(openingHours) {
+  if (!openingHours) return null;
+  if (openingHours.raw) return openingHours.raw;
+  const today = new Date().getDay();
+  const todayHours = (openingHours.weekly || []).filter((item) => item.dayOfWeek === today);
+  if (todayHours.length > 0) {
+    return todayHours.map((item) =>
+      item.opensAt && item.closesAt ? `${item.opensAt}–${item.closesAt}` : item.note || "Stängt"
+    ).join(", ");
+  }
+  return openingHours.note || null;
+}
+
+function formatVerifiedDate(value) {
+  if (!value) return null;
+  const date = new Date(value.length === 10 ? `${value}T12:00:00` : value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("sv-SE", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(date);
+}
+
+function detailFact(label, value) {
+  return el("div", { class: "detail-fact" }, [
+    el("dt", { text: label }),
+    el("dd", { text: value }),
+  ]);
+}
+
 function openDetail(id) {
   const p = state.places.find((x) => x.id === id);
   if (!p) return;
@@ -556,6 +593,18 @@ function openDetail(id) {
     contactItems.push(a);
   }
 
+  const factItems = [];
+  if (p.address?.formatted) factItems.push(detailFact("Adress", p.address.formatted));
+  const hours = openingHoursSummary(p.openingHours);
+  if (hours) factItems.push(detailFact("Öppettider", hours));
+  if (p.openingHours?.note && p.openingHours.note !== hours) {
+    factItems.push(detailFact("Att tänka på", p.openingHours.note));
+  }
+  if (p.accessibility) factItems.push(detailFact("Tillgänglighet", p.accessibility));
+  if (p.priceLevel) factItems.push(detailFact("Prisnivå", `${p.priceLevel} av 4`));
+  const verified = formatVerifiedDate(p.lastVerifiedAt);
+  if (verified) factItems.push(detailFact("Senast verifierad", verified));
+
   detailContent.replaceChildren(
     badge,
     el("h2", { class: "detail-name", id: "detail-name", text: p.name }),
@@ -564,6 +613,7 @@ function openDetail(id) {
       text: distance != null ? `${formatDistance(distance)} från din position` : "Position okänd",
     }),
     el("p", { class: "detail-desc", text: p.description }),
+    ...(factItems.length > 0 ? [el("dl", { class: "detail-facts" }, factItems)] : []),
     ...(contactItems.length > 0 ? [el("div", { class: "detail-contact" }, contactItems)] : []),
     el("div", { class: "detail-actions" }, [
       el(
@@ -613,10 +663,17 @@ function focusPlace(id) {
 // ---------------------------------------------------------------------------
 
 function renderFilterBar() {
+  const availableCategories = new Set(
+    state.places.flatMap((place) =>
+      Array.isArray(place.categories) && place.categories.length > 0
+        ? place.categories
+        : [place.category]
+    )
+  );
   const chips = [
     ["all", { label: "Alla", emoji: "📍" }],
     ["favorites", { label: "Sparade", emoji: "♥" }],
-    ...Object.entries(CATEGORIES),
+    ...Object.entries(CATEGORIES).filter(([key]) => availableCategories.has(key)),
   ];
 
   filterBarEl.replaceChildren();
@@ -762,15 +819,15 @@ document.addEventListener("keydown", (e) => {
 // ---------------------------------------------------------------------------
 
 async function init() {
-  renderFilterBar();
-
   try {
-    state.places = await loadPlaces();
+    const [, places] = await Promise.all([loadCategories(), loadPlaces()]);
+    state.places = places;
   } catch (e) {
     setStatus("Kunde inte ladda platser.", "is-error");
     return;
   }
 
+  renderFilterBar();
   render();
   setActiveTab(loadActiveTab());
   requestLocation();
