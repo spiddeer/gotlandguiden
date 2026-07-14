@@ -8,6 +8,7 @@ const LOCATED_ZOOM = 12;
 const FOCUS_ZOOM = 14;
 const FAVORITES_KEY = "gg_favorites";
 const DARK_KEY = "gg_dark";
+const ACTIVE_TAB_KEY = "gg_active_tab";
 
 // Appens tillstånd – render() läser alltid härifrån.
 const state = {
@@ -68,12 +69,19 @@ const detailContent = detailSheet.querySelector(".detail-content");
 const detailClose = document.getElementById("detail-close");
 const darkBtn = document.getElementById("dark-btn");
 const siteTabsEl = document.getElementById("site-tabs");
-const siteTabButtons = Array.from(document.querySelectorAll(".site-tab"));
+const siteTabButtons = Array.from(document.querySelectorAll(".js-tab-trigger"));
 const tabUpptackEl = document.getElementById("tab-upptack");
 const tabSparadeEl = document.getElementById("tab-sparade");
 const tabGuideEl = document.getElementById("tab-guide");
 const savedListEl = document.getElementById("saved-list");
 const savedSummaryEl = document.getElementById("saved-summary");
+const heroTotalEl = document.getElementById("hero-total");
+const heroVisibleEl = document.getElementById("hero-visible");
+const heroSavedEl = document.getElementById("hero-saved");
+const quickNearbyBtn = document.getElementById("quick-nearby");
+const quickFoodBtn = document.getElementById("quick-food");
+const quickBeachBtn = document.getElementById("quick-beach");
+const quickRandomBtn = document.getElementById("quick-random");
 
 function setStatus(message, stateClass) {
   statusEl.textContent = message;
@@ -336,8 +344,17 @@ function renderSavedList() {
   savedItems.forEach((p) => savedListEl.appendChild(placeCard(p)));
 }
 
+function renderHeroStats(visibleItems) {
+  heroTotalEl.textContent = String(state.places.length);
+  heroVisibleEl.textContent = String(visibleItems.length);
+  heroSavedEl.textContent = String(state.favorites.size);
+}
+
 function setActiveTab(tabKey) {
   state.activeTab = tabKey;
+  try {
+    localStorage.setItem(ACTIVE_TAB_KEY, tabKey);
+  } catch (e) {}
 
   const tabMap = {
     upptack: tabUpptackEl,
@@ -373,11 +390,33 @@ function setActiveTab(tabKey) {
   renderMarkers([]);
 }
 
+function loadActiveTab() {
+  try {
+    const tab = localStorage.getItem(ACTIVE_TAB_KEY);
+    if (tab === "upptack" || tab === "sparade" || tab === "guide") return tab;
+  } catch (e) {}
+  return "upptack";
+}
+
 function render() {
   const items = visiblePlaces();
   renderMarkers(items);
   renderList(items);
   renderSavedList();
+  renderHeroStats(items);
+}
+
+function activateCategory(categoryKey) {
+  state.activeCategory = categoryKey;
+  renderFilterBar();
+  render();
+}
+
+function jumpToRandomPlace() {
+  const items = visiblePlaces();
+  if (items.length === 0) return;
+  const pick = items[Math.floor(Math.random() * items.length)];
+  openDetail(pick.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -563,9 +602,36 @@ searchInput.addEventListener("input", (e) => {
 });
 
 siteTabsEl.addEventListener("click", (e) => {
-  const btn = e.target.closest(".site-tab");
+  const btn = e.target.closest(".js-tab-trigger");
   if (!btn) return;
   setActiveTab(btn.dataset.tab);
+});
+
+document.getElementById("mobile-nav").addEventListener("click", (e) => {
+  const btn = e.target.closest(".js-tab-trigger");
+  if (!btn) return;
+  setActiveTab(btn.dataset.tab);
+});
+
+quickFoodBtn.addEventListener("click", () => {
+  setActiveTab("upptack");
+  activateCategory("mat");
+});
+
+quickNearbyBtn.addEventListener("click", () => {
+  setActiveTab("upptack");
+  activateCategory("all");
+  requestLocation();
+});
+
+quickBeachBtn.addEventListener("click", () => {
+  setActiveTab("upptack");
+  activateCategory("strand");
+});
+
+quickRandomBtn.addEventListener("click", () => {
+  setActiveTab("upptack");
+  jumpToRandomPlace();
 });
 
 locateBtn.addEventListener("click", () => {
@@ -599,7 +665,7 @@ async function init() {
   }
 
   render();
-  setActiveTab("upptack");
+  setActiveTab(loadActiveTab());
   requestLocation();
 
   setTimeout(() => map.invalidateSize(), 200);

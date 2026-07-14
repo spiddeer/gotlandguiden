@@ -55,12 +55,39 @@
       </header>
 
       <nav id="site-tabs" class="site-tabs" aria-label="Huvudsektioner">
-        <button class="site-tab is-active" data-tab="upptack" type="button" aria-pressed="true">🧭 Upptäck</button>
-        <button class="site-tab" data-tab="sparade" type="button" aria-pressed="false">♥ Sparade</button>
-        <button class="site-tab" data-tab="guide" type="button" aria-pressed="false">ℹ️ Guide</button>
+        <button class="site-tab js-tab-trigger is-active" data-tab="upptack" type="button" aria-pressed="true">🧭 Upptäck</button>
+        <button class="site-tab js-tab-trigger" data-tab="sparade" type="button" aria-pressed="false">♥ Sparade</button>
+        <button class="site-tab js-tab-trigger" data-tab="guide" type="button" aria-pressed="false">ℹ️ Guide</button>
       </nav>
 
       <section id="tab-upptack" class="tab-section is-active" aria-label="Upptäck Gotland">
+        <section class="hero-block" aria-label="Snabböversikt">
+          <div class="hero-headline">
+            <p class="hero-kicker">Planera smartare</p>
+            <h2>Din Gotlandsdag börjar här</h2>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <span id="hero-total" class="hero-stat-value">0</span>
+              <span class="hero-stat-label">Totalt platser</span>
+            </div>
+            <div class="hero-stat">
+              <span id="hero-visible" class="hero-stat-value">0</span>
+              <span class="hero-stat-label">Visas nu</span>
+            </div>
+            <div class="hero-stat">
+              <span id="hero-saved" class="hero-stat-value">0</span>
+              <span class="hero-stat-label">Sparade</span>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <button id="quick-nearby" class="hero-action" type="button">📍 Nära mig</button>
+            <button id="quick-food" class="hero-action" type="button">🍽️ Mat nu</button>
+            <button id="quick-beach" class="hero-action" type="button">🏖️ Strandläge</button>
+            <button id="quick-random" class="hero-action" type="button">🎲 Överraska mig</button>
+          </div>
+        </section>
+
         <div class="search-wrap">
           <input
             id="search-input"
@@ -114,6 +141,21 @@
           </div>
         </div>
       </section>
+
+      <nav id="mobile-nav" class="mobile-nav" aria-label="Mobilnavigation">
+        <button class="mobile-nav-tab js-tab-trigger is-active" data-tab="upptack" type="button" aria-pressed="true">
+          <span class="mobile-nav-icon">🧭</span>
+          <span class="mobile-nav-label">Upptäck</span>
+        </button>
+        <button class="mobile-nav-tab js-tab-trigger" data-tab="sparade" type="button" aria-pressed="false">
+          <span class="mobile-nav-icon">♥</span>
+          <span class="mobile-nav-label">Sparade</span>
+        </button>
+        <button class="mobile-nav-tab js-tab-trigger" data-tab="guide" type="button" aria-pressed="false">
+          <span class="mobile-nav-icon">ℹ️</span>
+          <span class="mobile-nav-label">Guide</span>
+        </button>
+      </nav>
     </section>
 
     <!-- Detaljvy (slide-up) för en enskild plats -->
