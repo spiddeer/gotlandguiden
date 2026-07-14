@@ -54,28 +54,66 @@
         <p id="status" class="status">Söker din position…</p>
       </header>
 
-      <div class="search-wrap">
-        <input
-          id="search-input"
-          class="search-input"
-          type="search"
-          placeholder="Sök plats…"
-          aria-label="Sök plats"
-          autocomplete="off"
-        />
-      </div>
-
-      <nav id="filter-bar" class="filter-bar" aria-label="Filtrera kategorier">
-        <!-- Filter-chips fylls i via JS -->
+      <nav id="site-tabs" class="site-tabs" aria-label="Huvudsektioner">
+        <button class="site-tab is-active" data-tab="upptack" type="button" aria-pressed="true">🧭 Upptäck</button>
+        <button class="site-tab" data-tab="sparade" type="button" aria-pressed="false">♥ Sparade</button>
+        <button class="site-tab" data-tab="guide" type="button" aria-pressed="false">ℹ️ Guide</button>
       </nav>
 
-      <div class="panel-body">
-        <h2 class="section-title" id="list-title">Platser nära dig</h2>
-        <ul id="places-list" class="places-list">
-          <!-- Platser fylls på via JS -->
-          <li class="place-placeholder">Laddar platser…</li>
-        </ul>
-      </div>
+      <section id="tab-upptack" class="tab-section is-active" aria-label="Upptäck Gotland">
+        <div class="search-wrap">
+          <input
+            id="search-input"
+            class="search-input"
+            type="search"
+            placeholder="Sök plats, matställe eller sevärdhet…"
+            aria-label="Sök plats"
+            autocomplete="off"
+          />
+        </div>
+
+        <nav id="filter-bar" class="filter-bar" aria-label="Filtrera kategorier">
+          <!-- Filter-chips fylls i via JS -->
+        </nav>
+
+        <div class="panel-body">
+          <h2 class="section-title" id="list-title">Platser nära dig</h2>
+          <ul id="places-list" class="places-list">
+            <!-- Platser fylls på via JS -->
+            <li class="place-placeholder">Laddar platser…</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="tab-sparade" class="tab-section" aria-label="Sparade platser" hidden>
+        <div class="panel-body">
+          <h2 class="section-title">Dina favoriter</h2>
+          <p class="tab-lead" id="saved-summary">Här samlas platser du markerat med hjärta.</p>
+          <ul id="saved-list" class="places-list">
+            <li class="place-placeholder">Du har inga sparade platser än.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="tab-guide" class="tab-section" aria-label="Guide" hidden>
+        <div class="panel-body panel-body-guide">
+          <h2 class="section-title">Planera din dag på Gotland</h2>
+          <div class="guide-grid">
+            <article class="guide-card">
+              <h3>🌅 Morgon</h3>
+              <p>Börja med en strandpromenad och frukost på ett café i närheten av där du bor.</p>
+            </article>
+            <article class="guide-card">
+              <h3>🏛️ Dagtid</h3>
+              <p>Filtrera på sevärdheter och välj ut 2-3 stopp i samma område för en lugnare rutt.</p>
+            </article>
+            <article class="guide-card">
+              <h3>🍽️ Kväll</h3>
+              <p>Byt till Mat & dryck och spara favoriter. Du hittar dem snabbt i fliken Sparade.</p>
+            </article>
+          </div>
+        </div>
+      </section>
     </section>
 
     <!-- Detaljvy (slide-up) för en enskild plats -->

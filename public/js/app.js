@@ -17,6 +17,7 @@ const state = {
   query: "",
   favorites: loadFavorites(),
   selectedId: null,
+  activeTab: "upptack", // "upptack" | "sparade" | "guide"
 };
 
 // ---------------------------------------------------------------------------
@@ -66,6 +67,13 @@ const detailSheet = document.getElementById("detail-sheet");
 const detailContent = detailSheet.querySelector(".detail-content");
 const detailClose = document.getElementById("detail-close");
 const darkBtn = document.getElementById("dark-btn");
+const siteTabsEl = document.getElementById("site-tabs");
+const siteTabButtons = Array.from(document.querySelectorAll(".site-tab"));
+const tabUpptackEl = document.getElementById("tab-upptack");
+const tabSparadeEl = document.getElementById("tab-sparade");
+const tabGuideEl = document.getElementById("tab-guide");
+const savedListEl = document.getElementById("saved-list");
+const savedSummaryEl = document.getElementById("saved-summary");
 
 function setStatus(message, stateClass) {
   statusEl.textContent = message;
@@ -297,10 +305,79 @@ function renderList(items) {
   items.forEach((p) => listEl.appendChild(placeCard(p)));
 }
 
+function renderSavedList() {
+  savedListEl.replaceChildren();
+
+  const savedItems = state.places
+    .filter((p) => state.favorites.has(p.id))
+    .map((p) => ({
+      ...p,
+      distance: state.userLatLng ? distanceMeters(state.userLatLng, [p.lat, p.lng]) : null,
+    }))
+    .sort((a, b) => {
+      if (a.distance == null && b.distance == null) return a.name.localeCompare(b.name, "sv");
+      if (a.distance == null) return 1;
+      if (b.distance == null) return -1;
+      return a.distance - b.distance;
+    });
+
+  if (savedItems.length === 0) {
+    savedSummaryEl.textContent = "Du har inga favoriter ännu. Tryck på hjärtat i Upptäck för att spara platser.";
+    savedListEl.appendChild(
+      el("li", {
+        class: "place-placeholder",
+        text: "Inga sparade platser ännu.",
+      })
+    );
+    return;
+  }
+
+  savedSummaryEl.textContent = `Du har sparat ${savedItems.length} plats${savedItems.length === 1 ? "" : "er"}.`;
+  savedItems.forEach((p) => savedListEl.appendChild(placeCard(p)));
+}
+
+function setActiveTab(tabKey) {
+  state.activeTab = tabKey;
+
+  const tabMap = {
+    upptack: tabUpptackEl,
+    sparade: tabSparadeEl,
+    guide: tabGuideEl,
+  };
+
+  for (const [key, section] of Object.entries(tabMap)) {
+    const isActive = key === tabKey;
+    section.hidden = !isActive;
+    section.classList.toggle("is-active", isActive);
+  }
+
+  siteTabButtons.forEach((btn) => {
+    const isActive = btn.dataset.tab === tabKey;
+    btn.classList.toggle("is-active", isActive);
+    btn.setAttribute("aria-pressed", String(isActive));
+  });
+
+  if (tabKey === "upptack") {
+    render();
+    setTimeout(() => map.invalidateSize(), 80);
+    return;
+  }
+
+  if (tabKey === "sparade") {
+    renderSavedList();
+    renderMarkers(state.places.filter((p) => state.favorites.has(p.id)));
+    setTimeout(() => map.invalidateSize(), 80);
+    return;
+  }
+
+  renderMarkers([]);
+}
+
 function render() {
   const items = visiblePlaces();
   renderMarkers(items);
   renderList(items);
+  renderSavedList();
 }
 
 // ---------------------------------------------------------------------------
@@ -485,6 +562,12 @@ searchInput.addEventListener("input", (e) => {
   render();
 });
 
+siteTabsEl.addEventListener("click", (e) => {
+  const btn = e.target.closest(".site-tab");
+  if (!btn) return;
+  setActiveTab(btn.dataset.tab);
+});
+
 locateBtn.addEventListener("click", () => {
   if (state.userLatLng) {
     map.setView(state.userLatLng, LOCATED_ZOOM, { animate: true });
@@ -516,6 +599,7 @@ async function init() {
   }
 
   render();
+  setActiveTab("upptack");
   requestLocation();
 
   setTimeout(() => map.invalidateSize(), 200);

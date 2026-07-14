@@ -153,6 +153,17 @@ body {
   overflow: hidden;
 }
 
+.tab-section {
+  display: none;
+  min-height: 0;
+  flex: 1;
+}
+
+.tab-section.is-active {
+  display: flex;
+  flex-direction: column;
+}
+
 .panel-handle {
   width: 54px;
   height: 5px;
@@ -176,6 +187,40 @@ body {
   margin-top: 0.8rem;
   border-radius: 99px;
   background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+}
+
+.site-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  padding: 0.55rem 1.2rem 0.95rem;
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent);
+}
+
+.site-tab {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--surface-chip);
+  color: var(--color-text);
+  font-family: "Sora", "Segoe UI", sans-serif;
+  font-weight: 600;
+  font-size: 0.86rem;
+  padding: 0.56rem 0.45rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.site-tab:hover {
+  transform: translateY(-1px);
+  border-color: var(--chip-hover-border);
+}
+
+.site-tab.is-active {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #1786ac 100%);
+  color: #fff;
+  border-color: transparent;
 }
 
 .panel-header h1 {
@@ -271,6 +316,44 @@ body {
   padding: 1.2rem 1.35rem 2.1rem;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.tab-lead {
+  margin: -0.2rem 0 1.15rem;
+  font-size: 0.94rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.panel-body-guide {
+  padding-bottom: 2.6rem;
+}
+
+.guide-grid {
+  display: grid;
+  gap: 0.92rem;
+}
+
+.guide-card {
+  background: var(--surface-card);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  padding: 1rem 1rem 1.05rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.guide-card h3 {
+  margin: 0;
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 1.26rem;
+  color: var(--color-primary-dark);
+}
+
+.guide-card p {
+  margin: 0.45rem 0 0;
+  line-height: 1.58;
+  color: var(--color-text-muted);
+  font-size: 0.93rem;
 }
 
 .section-title {
@@ -654,6 +737,17 @@ body {
     padding: 1.25rem 1.4rem 2.2rem;
   }
 
+  .site-tabs {
+    padding-left: 1.4rem;
+    padding-right: 1.4rem;
+  }
+
+  .site-tab {
+    font-size: 0.92rem;
+    padding-top: 0.62rem;
+    padding-bottom: 0.62rem;
+  }
+
   .places-list {
     gap: 0.78rem;
   }
@@ -676,6 +770,7 @@ body {
   }
 
   .panel-header,
+  .site-tabs,
   .search-wrap,
   .filter-bar,
   .panel-body {
