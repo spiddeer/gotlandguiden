@@ -12,6 +12,7 @@ backend/node_modules/
 !.env.example
 
 # Deployment state
+/data/
 /deploy/proxmox/data/
 /deploy/proxmox/backups/
 

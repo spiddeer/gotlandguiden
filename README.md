@@ -52,6 +52,7 @@ Gotlandsguiden ar en platsguide som kombinerar:
 ```text
 backend/
   db.js
+  import-osm.js
   migrations.js
   place-repository.js
   server.js
@@ -156,11 +157,28 @@ inbyggda OpenStreetMap-snapshoten anvands bara som fallback i frontend-only-lage
 
 - Migreringar kors automatiskt nar backend startar.
 - `npm run seed` anvander `UPSERT` och kan koras flera ganger.
-- Seed uppdaterar bara OpenStreetMaps karndata och raderar inte manuellt
-  berikade oppettider, kontakter, bilder eller kallor.
+- Seed uppdaterar OpenStreetMaps karndata och fyller adress, kontaktuppgifter och
+  oppettider nar de finns i kallan. Manuellt berikade falt skrivs inte tomma.
+- OSM-poster som inte langre finns i aktuell snapshot markeras inaktiva i stallet
+  for att raderas, sa manuell historik och berikning bevaras.
 - Varje import loggas i tabellen `import_runs`.
 - Oppettider kan lagras bade som kallans originaltext och som strukturerade
   veckotider med datumundantag.
+
+### Uppdatera OpenStreetMap-snapshoten
+
+Kor importen fran `backend/` i repot:
+
+```bash
+npm run import:osm
+npm test
+```
+
+Importen hamtar namngivna platser inom Gotland inklusive Gotska Sandon, delar
+upp Overpass-fragan i mindre batchar, deduplicerar samma plats inom 250 meter
+och skriver bade `backend/seed-data.json` och frontendens fallback-snapshot.
+Varje plats kallsparas till sitt OpenStreetMap-objekt. Aktuell snapshot innehaller
+1 345 platser fordelade over samtliga tio kategorier.
 
 ## Kora lokalt (snabbstart)
 

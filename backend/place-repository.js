@@ -97,6 +97,76 @@ function upsertCorePlace(db, place, source = null) {
   }
 }
 
+function deactivateSourcePlaces(db, sourceType) {
+  return db.prepare(`
+    UPDATE places
+    SET is_active = 0
+    WHERE id IN (
+      SELECT place_id FROM place_sources WHERE source_type = ?
+    )
+  `).run(sourceType).changes;
+}
+
+function mergeImportedPlace(db, place, source = null) {
+  upsertCorePlace(db, place, source);
+  db.prepare("UPDATE places SET is_active = 1 WHERE id = ?").run(place.id);
+
+  const insertCategory = db.prepare(`
+    INSERT INTO place_categories (place_id, category_id, is_primary)
+    VALUES (?, ?, 0)
+    ON CONFLICT(place_id, category_id) DO NOTHING
+  `);
+  for (const categoryId of place.categories || []) {
+    if (categoryId !== place.category) insertCategory.run(place.id, categoryId);
+  }
+
+  const address = place.address || {};
+  const openingHours = place.openingHours || {};
+  const detailValues = {
+    placeId: place.id,
+    streetAddress: address.street || null,
+    postalCode: address.postalCode || null,
+    locality: address.locality || null,
+    municipality: address.municipality || null,
+    accessibility: place.accessibility || null,
+    openingHoursRaw: openingHours.raw || null,
+    openingHoursNote: openingHours.note || null,
+  };
+  if (Object.entries(detailValues).some(([key, value]) => key !== "placeId" && value)) {
+    db.prepare(`
+      INSERT INTO place_details
+        (place_id, street_address, postal_code, locality, municipality,
+         accessibility, opening_hours_raw, opening_hours_note, updated_at)
+      VALUES
+        (@placeId, @streetAddress, @postalCode, @locality, @municipality,
+         @accessibility, @openingHoursRaw, @openingHoursNote, CURRENT_TIMESTAMP)
+      ON CONFLICT(place_id) DO UPDATE SET
+        street_address = COALESCE(excluded.street_address, place_details.street_address),
+        postal_code = COALESCE(excluded.postal_code, place_details.postal_code),
+        locality = COALESCE(excluded.locality, place_details.locality),
+        municipality = COALESCE(excluded.municipality, place_details.municipality),
+        accessibility = COALESCE(excluded.accessibility, place_details.accessibility),
+        opening_hours_raw = COALESCE(excluded.opening_hours_raw, place_details.opening_hours_raw),
+        opening_hours_note = COALESCE(excluded.opening_hours_note, place_details.opening_hours_note),
+        updated_at = CURRENT_TIMESTAMP
+    `).run(detailValues);
+  }
+
+  const insertContact = db.prepare(`
+    INSERT OR IGNORE INTO place_contacts (place_id, type, value, label)
+    VALUES (?, ?, ?, ?)
+  `);
+  for (const type of ["website", "phone", "email"]) {
+    const values = place.contacts?.[`${type}s`] || [];
+    for (const item of values) {
+      const normalized = typeof item === "string" ? { value: item } : item;
+      if (normalized?.value) {
+        insertContact.run(place.id, type, normalized.value, normalized.label || null);
+      }
+    }
+  }
+}
+
 function addressFromRow(detail) {
   if (!detail) return null;
   const address = {
@@ -216,6 +286,7 @@ function listPlaces(db) {
   const places = db.prepare(`
     SELECT id, name, category, lat, lng, description
     FROM places
+    WHERE is_active = 1
     ORDER BY name COLLATE NOCASE
   `).all();
   return serializePlaces(db, places);
@@ -224,7 +295,7 @@ function listPlaces(db) {
 function getPlace(db, id) {
   const place = db.prepare(`
     SELECT id, name, category, lat, lng, description
-    FROM places WHERE id = ?
+    FROM places WHERE id = ? AND is_active = 1
   `).get(id);
   return place ? serializePlaces(db, [place])[0] : null;
 }
@@ -389,10 +460,12 @@ function savePlace(db, input, { create = false } = {}) {
 
 module.exports = {
   DEFAULT_CATEGORIES,
+  deactivateSourcePlaces,
   ensureCategories,
   getPlace,
   listCategories,
   listPlaces,
+  mergeImportedPlace,
   savePlace,
   upsertCorePlace,
 };

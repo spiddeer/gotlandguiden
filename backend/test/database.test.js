@@ -5,8 +5,10 @@ const { openDatabase } = require("../db");
 const { runMigrations } = require("../migrations");
 const {
   ensureCategories,
+  deactivateSourcePlaces,
   getPlace,
   listCategories,
+  mergeImportedPlace,
   savePlace,
   upsertCorePlace,
 } = require("../place-repository");
@@ -54,6 +56,7 @@ test("migrations create the rich schema and default categories", () => {
     assert.ok(tables.has(table), `${table} should exist`);
   }
   assert.equal(listCategories(database).length, 10);
+  assert.equal(database.prepare("SELECT COUNT(*) count FROM schema_migrations").get().count, 3);
   database.close();
 });
 
@@ -117,5 +120,75 @@ test("a place can belong to several categories", () => {
     description: "Café och gårdsbutik",
   }, { create: true });
   assert.deepEqual(getPlace(database, "gardscafe").categories, ["mat", "shopping", "familj"]);
+  database.close();
+});
+
+test("rich imports add categories and OSM fields without clearing manual enrichment", () => {
+  const database = openDatabase(":memory:");
+  savePlace(database, {
+    id: "utflykten",
+    name: "Utflykten",
+    category: "natur",
+    lat: 57.5,
+    lng: 18.5,
+    description: "Naturplats",
+    openingHours: { note: "Kontrollera säsongsöppet före besöket" },
+  }, { create: true });
+
+  mergeImportedPlace(database, {
+    id: "utflykten",
+    name: "Utflykten",
+    category: "smultronstallen",
+    categories: ["smultronstallen", "natur"],
+    lat: 57.5,
+    lng: 18.5,
+    description: "Utsiktsplats",
+    address: { locality: "Ljugarn" },
+    contacts: { websites: [{ value: "https://example.test" }] },
+    openingHours: { raw: "24/7" },
+  }, {
+    sourceType: "OpenStreetMap",
+    sourceUrl: "https://www.openstreetmap.org/node/1",
+    externalId: "utflykten",
+    lastVerifiedAt: "2026-07-14",
+  });
+
+  const place = getPlace(database, "utflykten");
+  assert.deepEqual(place.categories, ["smultronstallen", "natur"]);
+  assert.equal(place.address.locality, "Ljugarn");
+  assert.equal(place.website, "https://example.test");
+  assert.equal(place.openingHours.raw, "24/7");
+  assert.equal(place.openingHours.note, "Kontrollera säsongsöppet före besöket");
+  database.close();
+});
+
+test("a new source snapshot hides stale imports without deleting their enrichment", () => {
+  const database = openDatabase(":memory:");
+  const source = {
+    sourceType: "OpenStreetMap",
+    externalId: "stale-n1",
+    lastVerifiedAt: "2026-07-14",
+  };
+  mergeImportedPlace(database, {
+    id: "stale-n1",
+    name: "Tidigare plats",
+    category: "service",
+    categories: ["service"],
+    lat: 57.5,
+    lng: 18.5,
+    description: "Service",
+  }, source);
+  savePlace(database, {
+    id: "stale-n1",
+    openingHours: { note: "Manuellt kontrollerad" },
+  });
+
+  assert.equal(deactivateSourcePlaces(database, "OpenStreetMap"), 1);
+  assert.equal(getPlace(database, "stale-n1"), null);
+  assert.equal(database.prepare("SELECT COUNT(*) count FROM places WHERE id = 'stale-n1'").get().count, 1);
+  assert.equal(
+    database.prepare("SELECT opening_hours_note note FROM place_details WHERE place_id = 'stale-n1'").get().note,
+    "Manuellt kontrollerad"
+  );
   database.close();
 });

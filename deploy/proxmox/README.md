@@ -21,6 +21,8 @@ Denna runbook beskriver den faktiska produktionssetupen och hur den driftas.
 
 Backend kor additiva databasmigreringar automatiskt vid start. Seed-steget
 anvander `UPSERT`, sa befintlig berikning bevaras nar OSM-snapshoten importeras igen.
+Tidigare OSM-poster som saknas i den nya snapshoten markeras inaktiva men ligger
+kvar i SQLite for historik och eventuell manuell berikning.
 
 ## Kataloger i CT 201
 

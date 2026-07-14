@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { db } = require("./db");
-const { upsertCorePlace } = require("./place-repository");
+const { deactivateSourcePlaces, mergeImportedPlace } = require("./place-repository");
 
 const seedPath = path.join(__dirname, "seed-data.json");
 const places = JSON.parse(fs.readFileSync(seedPath, "utf8"));
@@ -12,11 +12,13 @@ const importRun = db.prepare(`
 
 try {
   db.transaction((rows) => {
+    deactivateSourcePlaces(db, "OpenStreetMap");
     for (const place of rows) {
-      upsertCorePlace(db, place, {
+      mergeImportedPlace(db, place, {
         sourceType: "OpenStreetMap",
-        externalId: place.id,
-        lastVerifiedAt: "2026-07-14",
+        sourceUrl: place.source?.sourceUrl || null,
+        externalId: place.source?.externalId || place.id,
+        lastVerifiedAt: place.source?.lastVerifiedAt || null,
       });
     }
   })(places);

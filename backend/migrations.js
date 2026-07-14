@@ -118,6 +118,18 @@ const MIGRATIONS = [
       `);
     },
   },
+  {
+    version: 3,
+    name: "add_place_activity_state",
+    up(db) {
+      db.exec(`
+        ALTER TABLE places ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1
+          CHECK (is_active IN (0, 1));
+        CREATE INDEX IF NOT EXISTS idx_places_active_category
+          ON places(is_active, category);
+      `);
+    },
+  },
 ];
 
 function runMigrations(db) {
