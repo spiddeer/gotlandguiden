@@ -92,7 +92,6 @@
 }
 
 html {
-  min-width: 320px;
   background: var(--background);
   color: var(--foreground);
   font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -100,7 +99,6 @@ html {
 }
 
 body {
-  min-width: 320px;
   min-height: 100vh;
   margin: 0;
   background:
@@ -140,6 +138,184 @@ button {
 
 .nav-safe {
   bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+.gutafinn-desktop-header {
+  display: none;
+}
+
+.gutafinn-responsive-shell {
+  min-height: 100svh;
+}
+
+.gutafinn-feed {
+  width: 100%;
+  max-width: 440px;
+  min-height: 100svh;
+  margin-inline: auto;
+  background: var(--background);
+  box-shadow: var(--shadow-float);
+}
+
+.gutafinn-responsive-shell.is-map-focus .gutafinn-feed {
+  display: none;
+}
+
+.gutafinn-map-pane {
+  height: 100svh;
+  min-width: 0;
+}
+
+.gutafinn-brand {
+  min-height: 44px;
+  border-radius: 0.75rem;
+  color: var(--sea-deep);
+  font: 700 1.45rem/1 "Fraunces", Georgia, serif;
+  outline: none;
+}
+
+.gutafinn-brand span {
+  color: var(--poppy);
+  font-style: italic;
+}
+
+.gutafinn-brand:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 40%, transparent);
+}
+
+@media (min-width: 640px) and (max-width: 1023px),
+  (min-width: 1024px) and (orientation: portrait) and (max-width: 1279px) {
+  .gutafinn-feed {
+    max-width: 720px;
+  }
+
+  .gutafinn-hero {
+    height: 390px;
+    margin: 1.25rem 1.25rem 0;
+    border-radius: 2rem;
+  }
+
+  .gutafinn-feed-content {
+    padding-inline: 1.75rem;
+  }
+
+  .gutafinn-bottom-nav {
+    max-width: 520px;
+  }
+}
+
+@media (min-width: 1024px) and (orientation: landscape), (min-width: 1280px) {
+  .gutafinn-desktop-header {
+    position: sticky;
+    z-index: 1000;
+    top: 0;
+    display: grid;
+    min-height: 72px;
+    grid-template-columns: minmax(160px, 1fr) auto minmax(160px, 1fr);
+    align-items: center;
+    gap: 1.5rem;
+    padding-inline: 1.75rem;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in oklch, var(--card) 95%, transparent);
+    backdrop-filter: blur(18px);
+  }
+
+  .gutafinn-responsive-shell {
+    display: grid;
+    height: calc(100svh - 72px);
+    min-height: 0;
+    grid-template-columns: minmax(460px, 540px) minmax(0, 1fr);
+    overflow: hidden;
+    transition: grid-template-columns 220ms ease;
+  }
+
+  .gutafinn-responsive-shell.is-map-focus {
+    grid-template-columns: 0 minmax(0, 1fr);
+  }
+
+  .gutafinn-feed,
+  .gutafinn-responsive-shell.is-map-focus .gutafinn-feed {
+    display: block;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    min-height: 0;
+    height: calc(100svh - 72px);
+    margin: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    box-shadow: 16px 0 42px oklch(0.22 0.04 220 / 0.1);
+  }
+
+  .gutafinn-responsive-shell.is-map-focus .gutafinn-feed {
+    visibility: hidden;
+    overflow: hidden;
+  }
+
+  .gutafinn-map-pane {
+    height: calc(100svh - 72px);
+  }
+
+  .gutafinn-hero {
+    height: 300px;
+    margin: 1.25rem 1.25rem 0;
+    border-radius: 1.75rem;
+  }
+
+  .gutafinn-feed-content {
+    padding-inline: 1.25rem;
+    padding-bottom: 2rem;
+  }
+
+  .gutafinn-featured-card {
+    display: grid;
+    grid-template-columns: 42% minmax(0, 1fr);
+  }
+
+  .gutafinn-featured-media {
+    height: auto;
+    min-height: 250px;
+  }
+
+  .gutafinn-featured-body > p {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .gutafinn-bottom-nav {
+    display: none;
+  }
+
+  .safe-bottom {
+    padding-bottom: 2rem;
+  }
+
+  .gutafinn-map .leaflet-bottom.leaflet-right {
+    bottom: 0.75rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .gutafinn-place-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .gutafinn-place-grid > * {
+    margin-block-start: 0 !important;
+  }
+
+  .gutafinn-place-grid > div {
+    gap: 0.5rem;
+  }
+
+  .gutafinn-place-grid img {
+    width: 4rem;
+    height: 4rem;
+  }
 }
 
 .gutafinn-map-shell {
@@ -255,6 +431,18 @@ button {
   box-shadow: 0 7px 18px oklch(0.22 0.04 220 / 0.32);
 }
 
+.gutafinn-place-marker--selected {
+  z-index: 900 !important;
+}
+
+.gutafinn-place-marker--selected span {
+  width: 30px;
+  height: 30px;
+  border-width: 4px;
+  background: var(--sea-deep);
+  box-shadow: 0 9px 24px oklch(0.22 0.04 220 / 0.4);
+}
+
 .gutafinn-place-marker span::after {
   position: absolute;
   width: 6px;
@@ -263,6 +451,12 @@ button {
   border-radius: 999px;
   background: var(--card);
   content: "";
+}
+
+.gutafinn-place-marker--selected span::after {
+  width: 8px;
+  height: 8px;
+  transform: translate(7px, 7px);
 }
 
 .gutafinn-user-marker {

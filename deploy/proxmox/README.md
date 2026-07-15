@@ -10,7 +10,7 @@ Denna runbook beskriver den faktiska produktionssetupen och hur den driftas.
 - Exponerad port i CT 201: `3003`
 - Publik doman: `https://gotland.tobtech.se`
 - Cloudflare Tunnel konfigurerad i separat CT 200
-- Senast live-verifierade release: `0637898` (2026-07-15)
+- Senast live-verifierade release: `1982690` (2026-07-15)
 - Datastatus: 1 345 aktiva och 17 inaktiva historiska platser i 10 kategorier
 
 ## Topologi
@@ -20,8 +20,9 @@ Denna runbook beskriver den faktiska produktionssetupen och hur den driftas.
 3. I CT 201 terminerar Nginx-container (`web`) pa port 3003.
 4. `web` byggs i tva steg: Node 22 skapar Gutafinns Vite-`dist/`, som kopieras
    till en ren Nginx-image via `deploy/Dockerfile`.
-5. Gutafinns `Karta` laddar OpenStreetMap-plattor direkt i browsern och klustrar
-   `/api/places` med Leaflet.markercluster.
+5. Gutafinn laddar OpenStreetMap-plattor direkt i browsern och klustrar
+   `/api/places` med Leaflet.markercluster. Mobil/iPad oppnar kartan via `Karta`;
+   desktop visar en permanent feed/karta-split med aterstallbart kartfokus.
 6. `Overraska mig` kor helt i browsern mot samma API-svar, anvander browser-GPS
    och lagrar endast begransad preferens-/visningshistorik i localStorage.
 7. `web` proxyar `/api/*` till `backend:8080`.
@@ -80,6 +81,12 @@ Efter en release som andrar `Overraska mig`, browser-verifiera dessutom:
 3. `Till fots`, `Cykel` och `Bil` med respektive OpenStreetMap-motor.
 4. Fem `Visa ett annat tips` utan upprepning nar kandidatpoolen racker.
 5. Att stamningsbildsetiketten ar synlig och att back aterstaller startsidan.
+
+Efter en release som andrar layout eller karta, browser-verifiera 320, 390, 768,
+820, 1024 landskap, 1280 och 1440px. Kontrollera att mobil/iPad inte far
+horisontell sidscroll, att desktop visar feed/karta sida vid sida, att
+`Kartfokus -> Hem` bevarar filter och att listval/markorklick synkas utan att
+Leaflet-instansen byggs om.
 
 ## Grundinstallation (om ny CT byggs)
 
@@ -176,13 +183,17 @@ curl -fsS https://gotland.tobtech.se/api/places | head
 
 ### Kontrollera den aktiva kartan
 
-Oppna `https://gotland.tobtech.se`, valj `Karta` och verifiera:
+Oppna `https://gotland.tobtech.se` i mobil och desktop och verifiera:
 
 1. Aktiv navetikett ar `Karta`.
 2. Platschipet visar 1 345 platser.
 3. OpenStreetMap-plattor och markerkluster laddas.
 4. `OpenStreetMap-bidragsgivare` ar synligt utan hover eller tryck.
 5. Browserkonsolen saknar runtime-undantag.
+6. Desktop visar toppnavigation, 460-540px feed och flexibel karta; mobil/iPad
+   visar bottom-nav och enkelkolumn.
+7. `Kartfokus` kan aterstallas och behaller kategori/feed-state.
+8. Listval oppnar ratt popup och markorklick lyfter ratt kort utan kart-reinitiering.
 
 ### Verifiera release och databas i CT 201
 
@@ -212,3 +223,5 @@ docker-compose -f deploy/proxmox/docker-compose.yml exec backend node -e \
 6. Verifiera `npm test` och `npm run build` vid frontendandringar; `public/` ar legacy och
    monteras inte langre av Compose.
 7. Kartan ar en browserkonsument av OpenStreetMap: ta aldrig bort eller gom attributionen.
+8. Driftsatt layout/karta ska verifieras mot hela viewportmatrisen och den
+   deployade Git-SHA:n, inte enbart mot lokalt bygge.

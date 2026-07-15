@@ -1,10 +1,11 @@
 # Gutafinn / Gotlandsguiden
 
-Gutafinn ar den aktiva mobilforst-frontenden for att hitta saker att gora, se
-och ata pa Gotland just nu. Repot innehaller ocksa Gotlandsguidens befintliga
-Express/SQLite-API, OSM-import och Proxmox-drift.
+Gutafinn ar den aktiva responsiva, mobilforst-frontenden for att hitta saker att
+gora, se och ata pa Gotland just nu. Samma React-app fungerar som enkelkolumn pa
+mobil och iPad samt som synkroniserad feed/karta pa desktop. Repot innehaller
+ocksa Gotlandsguidens befintliga Express/SQLite-API, OSM-import och Proxmox-drift.
 
-Dokumentationen ar avstamd mot produktionssetupen och release `0637898` den
+Dokumentationen ar avstamd mot produktionssetupen och release `1982690` den
 15 juli 2026.
 
 ## Live
@@ -17,21 +18,27 @@ Produkten kombinerar:
 
 - GPS-inspirerad Gutafinn-startsida med sokning och kategorifilter
 - Fotografiska kort for narhet, aktivitet, sevardhet och mat
-- Lokal sparstatus och fast mobilnavigation
-- Inbyggd Leaflet-karta med klustrade platser och GPS-markor
+- Lokal sparstatus, fast mobilnavigation och desktop-topnavigation
+- Inbyggd Leaflet-karta med klustrade platser, GPS-markor och tvavagsval
 - Vader- och solnedgangsoversikt for Ljugarn
 - Backend-API for lasning/skapande av platser
 - Driftbar setup i Proxmox med Docker Compose, backup och Cloudflare-routing
 
 ## Huvudfunktioner
 
-- 440px mobilcanvas med fotografisk kusthero och Live GPS-status
+- Fotografisk kusthero och Live GPS-status i 440px mobilcanvas
+- Rymligare enkelkolumn upp till iPad-portratt och feed/karta sida vid sida fran
+  1024px landskap eller 1280px bredd
+- 460-540px scrollande desktop-feed, flexibel sticky karta och aterstallbart
+  `Kartfokus` som bevarar aktiv sokning och kategori
 - Kombinerad sok- och kategorifiltrering for Allt, Gora, Se och Ata
 - `Overraska mig` skapar ett GPS-baserat mikroaventyr fran vald tid och fardsatt
   med faktabaserade skal, adaptiv sokradie och repetitionsskydd
 - Featured-kort med verifieringsdatum, GPS-avstand, gangtid, oppetstatus och `Ta mig hit`
 - Alla 1 345 aktiva platser laddas fran produktions-API:t
-- Kartflik med OpenStreetMap-plattor, markercluster och permanent synlig attribution
+- Synkroniserad Leaflet-karta: listval fokuserar markor och markorklick lyfter
+  motsvarande kort utan att kartinstansen byggs om
+- OpenStreetMap-plattor, markercluster och permanent synlig attribution
 - Verkligt GPS-avstand, uppskattad gangtid och livevader/solnedgang
 - Beständig sparlista i localStorage
 - Fem genererade, optimerade WebP-bilder i `src/assets/`
@@ -68,7 +75,8 @@ Produkten kombinerar:
 ```text
 src/
   assets/                 # fem optimerade Gotlandsbilder
-  components/gutafinn-map.tsx # aktiv Leaflet-karta, kluster och GPS-markor
+  components/gutafinn-map.tsx # stabil Leaflet-karta, kluster, GPS och platsval
+  components/gutafinn-map.test.tsx # karta/livscykel/selection i jsdom
   components/surprise-adventure.tsx # tillgangligt helskarmsflode for Overraska mig
   components/ui/          # shadcn/ui-grundkomponenter
   lib/surprise.ts         # radie, urval, motiveringar och OSM-navigation
@@ -272,9 +280,11 @@ curl -fsS https://gotland.tobtech.se/api/categories
 curl -fsS https://gotland.tobtech.se/api/places
 ```
 
-Verifiera dessutom i en riktig browser att `Karta` oppnar den inbyggda kartan,
-att kluster och kartplattor laddas, att platsantalet ar 1 345 och att
-`OpenStreetMap-bidragsgivare` alltid ar synligt.
+Verifiera dessutom i en riktig browser vid 320, 390, 768, 820, 1024 landskap,
+1280 och 1440px. Mobil/iPad ska vara enkelkolumn utan sidscroll; desktop ska
+visa feed och karta sida vid sida. Kontrollera att filter inte skapar en ny
+Leaflet-instans, att lista och markorer synkas at bada hall, att `Kartfokus` kan
+aterstallas samt att `OpenStreetMap-bidragsgivare` alltid ar synligt.
 
 ## Kora lokalt (snabbstart)
 
@@ -338,5 +348,6 @@ Nattlig backup hanteras via systemd timer:
 
 ## Status
 
-Projektet ar aktivt i produktion. Gutafinns React-startsida och inbyggda
-Leaflet-karta serveras av Nginx, medan Express/SQLite fortsatt ar datakallan.
+Projektet ar aktivt i produktion. Gutafinns responsiva React-startsida och
+inbyggda Leaflet-karta serveras av Nginx, medan Express/SQLite fortsatt ar
+datakallan. Live-status ska alltid styrkas separat med deployad Git-SHA.

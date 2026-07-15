@@ -30,7 +30,7 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
 - Publik doman: `https://gotland.tobtech.se`
 - Edge-routing: Cloudflare Tunnel (konfig i separat CT 200)
 - Git remote: `https://github.com/spiddeer/gotlandguiden.git`
-- Senast live-verifierade frontendrelease: `0637898` (2026-07-15)
+- Senast live-verifierade frontendrelease: `1982690` (2026-07-15)
 - Produktionssnapshot: 1 345 aktiva platser, 17 inaktiva historiska platser,
   10 kategorier och 4 databasmigreringar (verifierat 2026-07-14)
 
@@ -41,20 +41,26 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
 1. Docker bygger Vite-frontenden i `deploy/Dockerfile` och kopierar `dist/` till Nginx.
 2. Browser laddar Gutafinn via Nginx-container (`web`).
 3. Gutafinn laddar alla aktiva platser fran `/api/places`, filtrerar och sorterar lokalt.
-4. Kartfliken renderar alla platser i Leaflet-markercluster och laddar kartplattor
-   direkt fran OpenStreetMap med permanent synlig attribution.
-5. Browsern ber om geolokalisering for verkligt avstand/GPS-markor och hamtar vader fran Open-Meteo.
-6. `Overraska mig` gor ett lokalt urval fran samma platslista och oppnar
+4. Mobil/iPad visar en enkelkolumn och oppnar kartan via `Karta`; fran 1024px
+   landskap eller 1280px visas feed och karta samtidigt.
+5. Leaflet-instansen skapas en gang. Kluster, GPS och vald plats uppdateras via
+   separata effekter och kartan behaller permanent synlig OSM-attribution.
+6. Browsern ber om geolokalisering for verkligt avstand/GPS-markor och hamtar vader fran Open-Meteo.
+7. `Overraska mig` gor ett lokalt urval fran samma platslista och oppnar
    fardsattsanpassad navigation hos OpenStreetMap.
-7. Nginx proxyar `/api/*` till Express-container (`backend:8080`).
-8. Backend laser/skriver SQLite i monterad volym `deploy/proxmox/data/places.db`.
+8. Nginx proxyar `/api/*` till Express-container (`backend:8080`).
+9. Backend laser/skriver SQLite i monterad volym `deploy/proxmox/data/places.db`.
 
 ### Frontendfiler
 
 - `index.html`: Vite-shell, fontlankar och statisk SEO-metadata.
 - `src/routes/__root.tsx`: TanStack Router-root och dynamisk head-metadata.
-- `src/routes/index.tsx`: Gutafinn-startsida, API-laddning, GPS, sokning, filter och sparstatus.
-- `src/components/gutafinn-map.tsx`: aktiv Leaflet-karta, kluster, popups, GPS-markor och OSM-attribution.
+- `src/routes/index.tsx`: responsivt shell, API/GPS, sokning/filter, nav-state,
+  kartfokus, valt plats-id och lista/karta-synk.
+- `src/components/gutafinn-map.tsx`: stabil Leaflet-livscykel, kluster, popups,
+  GPS-markor, markerregister, valt state och OSM-attribution.
+- `src/components/gutafinn-map.test.tsx`: jsdom-regressionstester for engangsinitiering,
+  separata GPS-/klusteruppdateringar, val och markorklick.
 - `src/components/surprise-adventure.tsx`: tillgangligt helskarmsflode for tid, fardsatt, GPS-states och aventyrskort.
 - `src/lib/places.ts`: API-typer, kategorimappning, avstand, oppettider och filtrering.
 - `src/lib/surprise.ts`: ren radie-/urvalslogik, faktamotiveringar, restidsestimat och OSM-URL:er.
@@ -97,8 +103,16 @@ far inte lagras. Bevara faktamallar, tydlig stamningsbildsetikett och
 fardsattsanpassade OSM-motorer for gang, cykel och bil.
 
 All fargsattning i komponenter ska ga via semantiska tokens fran
-`src/styles.css`. Bevara 440px mobilcanvas, svenska texter, 44px touch targets,
-fokusmarkeringar, safe areas och reduced-motion-stod enligt `DESIGN.md`.
+`src/styles.css`. Bevara enkelkolumn pa mobil, rymligare enkelkolumn pa
+iPad-portratt samt split-layout fran 1024px landskap/1280px. Desktop-feeden ska
+vara 460-540px, kartan flexibel och toppnavigationen ersatta bottom-nav. Bevara
+svenska texter, 44px touch targets, fokusmarkeringar, safe areas och
+reduced-motion-stod enligt `DESIGN.md`.
+
+`activeNav` och `feedMode` ar avsiktligt separata: `Kartfokus` far inte tappa
+sokning, kategori eller sparvy. Listval och markorklick ska synka
+`selectedPlaceId` at bada hall. Bygg aldrig om Leaflet-instansen for filter,
+GPS eller val; initiering, kluster, GPS och selection ska forbli separata.
 Leaflet-kontroller, markorer och attribution maste vara tangentbords-/touchbara,
 och OpenStreetMap-krediteringen ska vara permanent lasbar pa alla viewportstorlekar.
 
@@ -187,8 +201,9 @@ curl -fsS https://gotland.tobtech.se/api/categories
 curl -fsS https://gotland.tobtech.se/api/places
 ```
 
-Oppna darefter `Karta` i en riktig browser och verifiera Leaflet-container,
-kartplattor, kluster, platsantal och synlig OpenStreetMap-attribution.
+Browser-verifiera darefter 320, 390, 768, 820, 1024 landskap, 1280 och 1440px.
+Kontrollera Leaflet-container, kartplattor, kluster, lista/karta-synk,
+aterstallbart kartfokus, bevarade filter och synlig OpenStreetMap-attribution.
 
 ## AI-agent policy (viktigt)
 
@@ -202,6 +217,10 @@ kartplattor, kluster, platsantal och synlig OpenStreetMap-attribution.
 8. Hall `backend/seed-data.json` och `public/js/places-data.js` synkroniserade.
 9. Kor `npm test` och `npm run build` efter andringar i `src/`, Vite, Tailwind eller frontend-Dockerbygget.
 10. Vid kartandringar: behall Leaflet-attribution synlig och verifiera med den fulla `/api/places`-mangden.
+11. Leaflet-instansen far inte aterinitieras av filter, GPS eller valt plats-id;
+    behall och utoka `gutafinn-map.test.tsx` vid livscykelandringar.
+12. Responsiva andringar ska browserkontrolleras over hela 320-1440px-matrisen
+    och far inte skapa mobil sidscroll eller dolja bottom-nav/topnavigation.
 
 ## Snabb felsokning
 
@@ -211,6 +230,8 @@ kartplattor, kluster, platsantal och synlig OpenStreetMap-attribution.
 - DB-problem: kontrollera att `deploy/proxmox/data/places.db` finns och ar skrivbar.
 - Styling behover skarpas: kontrollera `src/styles.css`, semantiska tokens och Tailwind-klasser.
 - Kartan ar tom: kontrollera `/api/places`, Leaflet-importerna, markercluster och browserkonsolen.
+- Kartan blinkar eller tappar state: kontrollera effektberoenden och att initiering
+  fortfarande sker en gang medan kluster, GPS och selection uppdateras separat.
 
 ## Relaterad dokumentation
 

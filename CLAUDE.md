@@ -1,7 +1,7 @@
 # Project Context
 
-Gutafinn is the active Swedish mobile-first frontend for the Gotlandsguiden
-backend and deployment stack.
+Gutafinn is the active Swedish responsive, mobile-first frontend for the
+Gotlandsguiden backend and deployment stack.
 
 ## Stack and operation
 
@@ -12,8 +12,11 @@ backend and deployment stack.
 - Backend: Node.js, Express and SQLite (`better-sqlite3`) in `backend/`
 - Data: Gutafinn loads the production API and its 1,345-place SQLite dataset
   under `/api/*`; GPS drives real distances and Open-Meteo supplies live weather
-- Map: the `Karta` tab is an embedded Leaflet atlas with clustered live places,
-  a GPS marker and persistently readable OpenStreetMap attribution
+- Responsive layout: mobile and portrait tablets use one feed column; from
+  1024px landscape or 1280px the 460-540px feed and flexible map sit side by side
+- Map: `Karta` is a restorable focus mode on desktop and an embedded Leaflet
+  atlas on mobile, with bidirectional list/marker selection, GPS, clusters and
+  persistently readable OpenStreetMap attribution
 - Discovery: `Overraska mig` is an internal GPS-required micro-adventure flow
   backed by pure selection logic and bounded browser-only history
 - Deployment: Docker Compose in Proxmox LXC CT 201 behind Cloudflare Tunnel in CT 200
@@ -26,7 +29,11 @@ backend and deployment stack.
 - Keep design tokens in `src/styles.css`; do not hardcode component colors.
 - Keep active map behavior in `src/components/gutafinn-map.tsx`; do not move it
   back to the unmounted `public/` frontend or hide OpenStreetMap attribution.
-- Preserve mobile-first Swedish copy, 44px targets, focus states and safe areas.
+- Initialize Leaflet once. Keep marker clusters, GPS and selected-place updates
+  in separate effects; filtering and navigation must preserve the map instance.
+- Keep `activeNav` separate from `feedMode` so map focus preserves filters and feed state.
+- Preserve the 320px mobile, 768/820px portrait-tablet and 1024-1440px split
+  contracts, Swedish copy, 44px targets, focus states and safe areas.
 - Saved place IDs persist in localStorage under `gutafinn_saved_places`.
 - Surprise preferences/history use the four `gutafinn_surprise_*` keys, keep at
   most 20 IDs/categories and never persist GPS coordinates.
@@ -36,8 +43,10 @@ backend and deployment stack.
 - `public/` is the preserved legacy Leaflet frontend and is no longer mounted by Compose.
 - Preserve API, SQLite migrations, OSM source tracking and manually enriched data.
 - Never commit runtime data from `deploy/proxmox/data/` or `backups/`.
-- Run root `npm test` plus `npm run build`; run `npm test` in `backend/` for
-  backend, schema, seed or import changes. Browser-check the map before release.
+- Run root `npm test` plus `npm run build`; map lifecycle behavior belongs in
+  `src/components/gutafinn-map.test.tsx`. Run `npm test` in `backend/` for
+  backend, schema, seed or import changes. Browser-check 320, 390, 768, 820,
+  1024 landscape, 1280 and 1440px before release.
 
 ## Read first
 

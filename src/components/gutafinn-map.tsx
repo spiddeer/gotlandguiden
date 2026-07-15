@@ -5,8 +5,28 @@ import { useEffect, useRef } from "react"
 
 import { Button } from "@/components/ui/button"
 import type { ApiPlace, Coordinates } from "@/lib/places"
+import { cn } from "@/lib/utils"
 
 const GOTLAND_CENTER: L.LatLngExpression = [57.5, 18.55]
+
+function createPlaceIcon(selected = false) {
+  return L.divIcon({
+    className: cn("gutafinn-place-marker", selected && "gutafinn-place-marker--selected"),
+    html: '<span aria-hidden="true"></span>',
+    iconSize: selected ? [32, 32] : [24, 24],
+    iconAnchor: selected ? [16, 16] : [12, 12],
+    popupAnchor: [0, selected ? -19 : -15],
+  })
+}
+
+function createUserIcon() {
+  return L.divIcon({
+    className: "gutafinn-user-marker",
+    html: '<span aria-hidden="true"></span>',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  })
+}
 
 function createPopup(place: ApiPlace) {
   const popup = document.createElement("article")
@@ -35,25 +55,38 @@ export function GutafinnMap({
   places,
   position,
   locationState,
+  selectedPlaceId = null,
   onRequestLocation,
+  onPlaceSelect,
+  className,
 }: {
   places: ApiPlace[]
   position: Coordinates | null
   locationState: "idle" | "loading" | "ready" | "unavailable"
+  selectedPlaceId?: string | null
   onRequestLocation: () => void
+  onPlaceSelect?: (placeId: string) => void
+  className?: string
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<L.Map | null>(null)
+  const clustersRef = useRef<L.MarkerClusterGroup | null>(null)
+  const placeMarkersRef = useRef(new Map<string, L.Marker>())
+  const userMarkerRef = useRef<L.Marker | null>(null)
+  const selectedMarkerIdRef = useRef<string | null>(null)
+  const hasCenteredOnUserRef = useRef(false)
 
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
 
     const map = L.map(container, {
-      center: position ? [position.lat, position.lng] : GOTLAND_CENTER,
-      zoom: position ? 12 : 9,
+      center: GOTLAND_CENTER,
+      zoom: 9,
       zoomControl: true,
       attributionControl: true,
     })
+    mapRef.current = map
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
@@ -61,53 +94,108 @@ export function GutafinnMap({
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-bidragsgivare',
     }).addTo(map)
 
-    const placeIcon = L.divIcon({
-      className: "gutafinn-place-marker",
-      html: '<span aria-hidden="true"></span>',
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
-      popupAnchor: [0, -15],
-    })
     const clusters = L.markerClusterGroup({
       chunkedLoading: true,
       maxClusterRadius: 46,
       showCoverageOnHover: false,
     })
+    clustersRef.current = clusters
+    map.addLayer(clusters)
+
+    const resizeObserver = new ResizeObserver(() => map.invalidateSize())
+    resizeObserver.observe(container)
+    window.requestAnimationFrame(() => map.invalidateSize())
+
+    return () => {
+      resizeObserver.disconnect()
+      placeMarkersRef.current.clear()
+      clustersRef.current = null
+      userMarkerRef.current = null
+      mapRef.current = null
+      map.remove()
+    }
+  }, [])
+
+  useEffect(() => {
+    const clusters = clustersRef.current
+    if (!clusters) return
+
+    clusters.clearLayers()
+    placeMarkersRef.current.clear()
 
     for (const place of places) {
       const marker = L.marker([place.lat, place.lng], {
-        icon: placeIcon,
+        icon: createPlaceIcon(place.id === selectedPlaceId),
         keyboard: true,
         title: place.name,
       })
       marker.bindPopup(createPopup(place), { closeButton: true, maxWidth: 260 })
+      marker.on("click", () => onPlaceSelect?.(place.id))
+      placeMarkersRef.current.set(place.id, marker)
       clusters.addLayer(marker)
     }
-    map.addLayer(clusters)
+  }, [onPlaceSelect, places])
 
-    if (position) {
-      const userIcon = L.divIcon({
-        className: "gutafinn-user-marker",
-        html: '<span aria-hidden="true"></span>',
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
-      })
-      L.marker([position.lat, position.lng], {
-        icon: userIcon,
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    if (!position) {
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove()
+        userMarkerRef.current = null
+      }
+      hasCenteredOnUserRef.current = false
+      return
+    }
+
+    const latLng: L.LatLngExpression = [position.lat, position.lng]
+    if (userMarkerRef.current) {
+      userMarkerRef.current.setLatLng(latLng)
+    } else {
+      userMarkerRef.current = L.marker(latLng, {
+        icon: createUserIcon(),
         keyboard: false,
         interactive: false,
         zIndexOffset: 1000,
       }).addTo(map)
     }
 
-    window.requestAnimationFrame(() => map.invalidateSize())
-    return () => {
-      map.remove()
+    if (!hasCenteredOnUserRef.current) {
+      map.setView(latLng, 12)
+      hasCenteredOnUserRef.current = true
     }
-  }, [places, position])
+  }, [position])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const clusters = clustersRef.current
+    const previousId = selectedMarkerIdRef.current
+
+    if (previousId && previousId !== selectedPlaceId) {
+      placeMarkersRef.current.get(previousId)?.setIcon(createPlaceIcon())
+    }
+
+    selectedMarkerIdRef.current = selectedPlaceId
+    if (!map || !clusters || !selectedPlaceId) return
+
+    const marker = placeMarkersRef.current.get(selectedPlaceId)
+    if (!marker) return
+    marker.setIcon(createPlaceIcon(true))
+    clusters.zoomToShowLayer(marker, () => {
+      map.panTo(marker.getLatLng())
+      marker.openPopup()
+    })
+  }, [selectedPlaceId])
 
   return (
-    <section className="gutafinn-map-shell relative h-[100svh] min-h-[560px] overflow-hidden bg-limestone" aria-label="Karta över platser på Gotland">
+    <section
+      className={cn(
+        "gutafinn-map-shell relative h-[100svh] min-h-[560px] overflow-hidden bg-limestone",
+        className,
+      )}
+      aria-label="Karta över platser på Gotland"
+    >
       <div
         ref={containerRef}
         className="gutafinn-map size-full"

@@ -52,6 +52,7 @@ type SurpriseAdventureProps = {
   onRequestLocation: () => void
   onRetryPlaces: () => void
   onNavigate: (place: ApiPlace, travelMode: TravelMode) => void
+  onRecommendationChange?: (placeId: string | null) => void
 }
 
 const timeOptions: Array<{ value: TimeBudget; label: string }> = [
@@ -118,6 +119,7 @@ export function SurpriseAdventure({
   onRequestLocation,
   onRetryPlaces,
   onNavigate,
+  onRecommendationChange,
 }: SurpriseAdventureProps) {
   const initialState = useRef(readInitialState())
   const recentPlaceIds = useRef(initialState.current.recentPlaceIds)
@@ -136,6 +138,7 @@ export function SurpriseAdventure({
   useEffect(() => {
     if (apiState !== "ready" || !position) {
       setRecommendation(null)
+      onRecommendationChange?.(null)
       return
     }
 
@@ -148,6 +151,7 @@ export function SurpriseAdventure({
       recentCategories: recentCategories.current,
     })
     setRecommendation(next)
+    onRecommendationChange?.(next?.place.id ?? null)
 
     if (!next) return
     recentPlaceIds.current = addRecentHistoryItem(recentPlaceIds.current, next.place.id)
@@ -158,7 +162,7 @@ export function SurpriseAdventure({
     writeRecentPlaceIds(window.localStorage, recentPlaceIds.current)
     writeRecentCategories(window.localStorage, recentCategories.current)
     setAnnouncement(reroll > 0 ? `Nytt tips: ${next.place.name}.` : "")
-  }, [apiState, places, position, reroll, timeBudget, travelMode])
+  }, [apiState, onRecommendationChange, places, position, reroll, timeBudget, travelMode])
 
   function selectTime(value: TimeBudget) {
     setTimeBudget(value)

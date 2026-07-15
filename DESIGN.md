@@ -1,7 +1,7 @@
 # Gutafinn Design System
 
-Status: implemented and live as the active frontend contract in release
-`0637898` on 2026-07-15.
+Status: implemented as the active frontend contract. The latest live-verified
+release is recorded separately in `README.md` and `deploy/proxmox/README.md`.
 
 ## 1. Product character
 
@@ -12,7 +12,8 @@ guide first and a travel editorial surface second.
 
 Core attributes:
 
-- Mobile-first and designed around a single `max-width: 440px` canvas
+- Mobile-first with a 440px phone canvas, a roomier portrait-tablet canvas and
+  a balanced feed/map workspace on landscape tablets and desktop
 - Coastal, tactile and distinctly Gotland-inspired
 - Concise Swedish copy and clear outdoor readability
 - Rich photography supported by restrained, token-driven interface chrome
@@ -68,7 +69,9 @@ color alone.
 - Standard content gutter: 20px
 - Use the semantic card and floating shadows from `src/styles.css`
 
-## 6. Active mobile composition
+## 6. Responsive composition
+
+### Mobile and portrait tablet
 
 1. A 440px-high photographic hero with a rounded 36px lower edge.
 2. Live GPS status and saved-place control at the safe-area-aware top edge.
@@ -85,8 +88,22 @@ color alone.
 11. Karta opens an embedded Leaflet atlas view with clustered live places, a GPS marker,
     keyboard-visible controls and persistently readable OpenStreetMap attribution.
 
-No desktop-specific information architecture is required. On wider screens the
-mobile canvas remains centered on the warm page background.
+At 640-1023px and portrait tablets up to 1279px, the single column grows to a
+maximum 720px, the hero becomes a rounded inset card and bottom navigation stays
+available.
+
+### Landscape tablet and desktop
+
+- Split layout starts at 1024px in landscape, or at 1280px regardless of orientation.
+- A sticky 72px top bar replaces bottom navigation.
+- The independently scrolling feed is 460-540px wide; the map consumes the
+  remaining viewport and stays mounted while feed state changes.
+- The featured place becomes a horizontal editorial card; at 1280px compact
+  places form a two-column grid inside the feed.
+- `Kartfokus` collapses the feed without discarding search, category, saved view
+  or the selected place; returning to `Hem` restores the same feed state.
+- Selecting a list card focuses and opens its marker. Selecting a marker marks
+  and scrolls the corresponding card into view.
 
 ## 7. Photography
 
@@ -121,11 +138,18 @@ warm restrained light and no embedded text or logos. Preserve meaningful
 - The active bottom-nav item uses `aria-current="page"`.
 - The map renders the full API dataset through marker clusters and uses the GPS
   position as a separate, non-interactive user marker.
+- The Leaflet map instance is initialized once. Marker clusters, GPS state and
+  selected-place state update independently so filtering and nav changes do not
+  rebuild or race the map.
+- The selected marker has a non-color-only visual state; selection changes are
+  also announced in a polite live region.
 - OpenStreetMap attribution stays readable without hover, focus or transient
   active state on both the active React map and preserved legacy map.
 - All controls show a visible focus ring and meet the 44px target.
 - Honor safe-area insets and `prefers-reduced-motion`.
 - The layout must work without horizontal page scrolling at 320px.
+- At 768/820px the layout remains a generous single column; at 1024px landscape,
+  1280px and 1440px it uses the split workspace without clipping either pane.
 
 ## 9. Voice
 
@@ -142,6 +166,12 @@ interface labels.
   all three travel modes and five consecutive rerolls.
 - Each surprise navigation action uses the correct OpenStreetMap direction engine.
 - Karta loads tiles and clusters without runtime errors and keeps attribution visible.
+- Filtering preserves the Leaflet instance; list and marker selection stay
+  synchronized; `Kartfokus -> Hem` preserves active category and feed mode.
+- Browser smoke covers 320, 390, 768, 820, 1024 landscape, 1280 and 1440px,
+  including denied GPS and horizontal-overflow checks.
+- `src/components/gutafinn-map.test.tsx` covers one-time map initialization,
+  GPS/cluster updates, selected-place updates and marker-click callbacks.
 - Generated assets are optimized and committed under `src/assets/`.
 - Root `npm test` verifies data mapping before `npm run build` completes TypeScript and Vite verification.
 - Docker serves `dist/` and continues proxying `/api/*` to the backend.

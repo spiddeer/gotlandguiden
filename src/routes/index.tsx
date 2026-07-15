@@ -57,6 +57,7 @@ export const Route = createFileRoute("/")({
 
 const SAVED_KEY = "gutafinn_saved_places"
 const LJUGARN = { lat: 57.333523, lng: 18.713461 }
+const SPLIT_LAYOUT_QUERY = "(min-width: 1024px) and (orientation: landscape), (min-width: 1280px)"
 
 const categoryItems: Array<{ label: Category; icon: LucideIcon }> = [
   { label: "Allt", icon: Sun },
@@ -89,6 +90,22 @@ function getGreeting() {
   return "God kväll"
 }
 
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() =>
+    typeof window === "undefined" ? false : window.matchMedia(query).matches,
+  )
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(query)
+    const update = () => setMatches(mediaQuery.matches)
+    update()
+    mediaQuery.addEventListener("change", update)
+    return () => mediaQuery.removeEventListener("change", update)
+  }, [query])
+
+  return matches
+}
+
 function getPlaceImage(place: ApiPlace) {
   const apiImage = place.images?.[0]?.url
   if (apiImage) return apiImage
@@ -107,12 +124,15 @@ function GutafinnPage() {
   const [query, setQuery] = useState("")
   const [saved, setSaved] = useState<Set<string>>(loadSavedIds)
   const [activeNav, setActiveNav] = useState("Hem")
+  const [feedMode, setFeedMode] = useState("Hem")
   const [position, setPosition] = useState<Coordinates | null>(null)
   const [locationState, setLocationState] = useState<"idle" | "loading" | "ready" | "unavailable">("idle")
   const [routeTarget, setRouteTarget] = useState<string | null>(null)
   const [showSurprise, setShowSurprise] = useState(false)
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null)
   const requestedLocation = useRef(false)
   const placeRequestId = useRef(0)
+  const splitLayout = useMediaQuery(SPLIT_LAYOUT_QUERY)
 
   const loadPlaces = useCallback(async () => {
     const requestId = ++placeRequestId.current
@@ -169,9 +189,9 @@ function GutafinnPage() {
         category,
         query,
         position,
-        activeNav === "Sparat" ? saved : undefined,
+        feedMode === "Sparat" ? saved : undefined,
       ),
-    [activeNav, category, places, position, query, saved],
+    [category, feedMode, places, position, query, saved],
   )
 
   const nearbyCount = useMemo(
@@ -179,11 +199,24 @@ function GutafinnPage() {
     [places, position],
   )
   const featuredPlace = visiblePlaces[0] ?? null
+  const selectedPlace = selectedPlaceId
+    ? visiblePlaces.find((place) => place.id === selectedPlaceId) ?? null
+    : null
   const listStart = featuredPlace ? 1 : 0
-  const listPlaces =
-    activeNav === "Sparat"
+  const baseListPlaces =
+    feedMode === "Sparat"
       ? visiblePlaces.slice(listStart)
       : visiblePlaces.slice(listStart, query || category !== "Allt" ? 40 : 5)
+  const listPlaces =
+    selectedPlace && selectedPlace.id !== featuredPlace?.id && !baseListPlaces.some((place) => place.id === selectedPlace.id)
+      ? [selectedPlace, ...baseListPlaces.slice(0, Math.max(0, baseListPlaces.length - 1))]
+      : baseListPlaces
+
+  useEffect(() => {
+    if (selectedPlaceId && !visiblePlaces.some((place) => place.id === selectedPlaceId)) {
+      setSelectedPlaceId(null)
+    }
+  }, [selectedPlaceId, visiblePlaces])
 
   function toggleSaved(placeId: string) {
     setSaved((current) => {
@@ -206,110 +239,174 @@ function GutafinnPage() {
   }
 
   function selectNavigation(label: string) {
+    setShowSurprise(false)
     setActiveNav(label)
-    if (label === "Hem") {
-      setCategory("Allt")
-      setQuery("")
-    }
+    if (label !== "Karta") setFeedMode(label)
     if (label === "Nära") requestLocation()
   }
 
-  if (showSurprise) {
-    return (
-      <main className="mx-auto min-h-screen w-full max-w-[440px] overflow-x-hidden bg-background shadow-[var(--shadow-float)]">
-        <SurpriseAdventure
-          places={places}
-          position={position}
-          apiState={apiState}
-          locationState={locationState}
-          onBack={() => setShowSurprise(false)}
-          onRequestLocation={requestLocation}
-          onRetryPlaces={loadPlaces}
-          onNavigate={openDirections}
-        />
-      </main>
-    )
-  }
+  const selectPlaceOnMap = useCallback((placeId: string) => {
+    setSelectedPlaceId(placeId)
+    window.requestAnimationFrame(() => {
+      document.getElementById(`place-card-${placeId}`)?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        block: "nearest",
+      })
+    })
+  }, [])
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-[440px] overflow-x-hidden bg-background shadow-[var(--shadow-float)]">
-      {activeNav === "Karta" ? (
-        <GutafinnMap
-          places={places}
-          position={position}
-          locationState={locationState}
-          onRequestLocation={requestLocation}
-        />
-      ) : (
-        <>
-          <Hero
-            totalPlaces={places.length}
-            nearbyCount={nearbyCount}
-            locationState={locationState}
-            onRequestLocation={requestLocation}
-            onShowSaved={() => setActiveNav("Sparat")}
-          />
+    <main className="gutafinn-app min-h-screen w-full overflow-x-hidden bg-background">
+      <DesktopHeader active={activeNav} locationState={locationState} onSelect={selectNavigation} />
 
-          <div className="safe-bottom relative z-10 -mt-7 space-y-8 px-5">
-            <SearchBar query={query} onQueryChange={setQuery} onRequestLocation={requestLocation} />
-            <CategoryFilter selected={category} onSelect={setCategory} />
-            {activeNav === "Hem" && <SurpriseCallout onOpen={() => setShowSurprise(true)} />}
-
-            {apiState === "error" ? (
-          <ApiUnavailable onRetry={loadPlaces} />
-        ) : apiState === "loading" ? (
-          <LoadingPlaces />
-        ) : featuredPlace ? (
-          <section aria-labelledby="nearby-heading">
-            <SectionHeading id="nearby-heading">
-              {position ? "Närmast dig nu" : activeNav === "Sparat" ? "Dina sparade platser" : "Utvalt på Gotland"}
-            </SectionHeading>
-            <FeaturedPlace
-              place={featuredPlace}
-              isSaved={saved.has(featuredPlace.id)}
-              onToggleSaved={() => toggleSaved(featuredPlace.id)}
-              onNavigate={() => openDirections(featuredPlace)}
+      <div className={cn("gutafinn-responsive-shell", activeNav === "Karta" && "is-map-focus")}>
+        <section className="gutafinn-feed" aria-label={showSurprise ? "Överraska mig" : "Upptäck platser"}>
+          {showSurprise ? (
+            <SurpriseAdventure
+              places={places}
+              position={position}
+              apiState={apiState}
+              locationState={locationState}
+              onBack={() => setShowSurprise(false)}
+              onRequestLocation={requestLocation}
+              onRetryPlaces={loadPlaces}
+              onNavigate={openDirections}
+              onRecommendationChange={setSelectedPlaceId}
             />
-            <p className="sr-only" role="status" aria-live="polite">
-              {routeTarget ? `Kartan till ${routeTarget} har öppnats.` : ""}
-            </p>
-          </section>
-        ) : (
-          <EmptyPlaces savedView={activeNav === "Sparat"} />
-        )}
+          ) : (
+            <>
+              <Hero
+                totalPlaces={places.length}
+                nearbyCount={nearbyCount}
+                locationState={locationState}
+                onRequestLocation={requestLocation}
+                onShowSaved={() => selectNavigation("Sparat")}
+              />
 
-            {apiState === "ready" && visiblePlaces.length > 0 && (
-          <section aria-labelledby="feed-heading">
-            <div className="mb-4 flex items-end justify-between gap-4">
-              <SectionHeading id="feed-heading" className="mb-0">
-                {position ? "Runt din plats" : "Fler tips på Gotland"}
-              </SectionHeading>
-              <span className="shrink-0 text-xs font-semibold text-muted-foreground">
-                {visiblePlaces.length.toLocaleString("sv-SE")} träffar
-              </span>
-            </div>
+              <div className="gutafinn-feed-content safe-bottom relative z-10 -mt-7 space-y-8 px-5">
+                <SearchBar query={query} onQueryChange={setQuery} onRequestLocation={requestLocation} />
+                <CategoryFilter selected={category} onSelect={setCategory} />
+                {feedMode === "Hem" && <SurpriseCallout onOpen={() => setShowSurprise(true)} />}
 
-            <div className="space-y-3">
-              {listPlaces.map((place) => (
-                <CompactPlace
-                  key={place.id}
-                  place={place}
-                  isSaved={saved.has(place.id)}
-                  onToggleSaved={() => toggleSaved(place.id)}
-                  onOpen={() => openDirections(place)}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+                {apiState === "error" ? (
+                  <ApiUnavailable onRetry={loadPlaces} />
+                ) : apiState === "loading" ? (
+                  <LoadingPlaces />
+                ) : featuredPlace ? (
+                  <section aria-labelledby="nearby-heading">
+                    <SectionHeading id="nearby-heading">
+                      {position ? "Närmast dig nu" : feedMode === "Sparat" ? "Dina sparade platser" : "Utvalt på Gotland"}
+                    </SectionHeading>
+                    <FeaturedPlace
+                      place={featuredPlace}
+                      isSaved={saved.has(featuredPlace.id)}
+                      onToggleSaved={() => toggleSaved(featuredPlace.id)}
+                      onNavigate={() => openDirections(featuredPlace)}
+                    />
+                    <p className="sr-only" role="status" aria-live="polite">
+                      {routeTarget ? `Kartan till ${routeTarget} har öppnats.` : ""}
+                    </p>
+                  </section>
+                ) : (
+                  <EmptyPlaces savedView={feedMode === "Sparat"} />
+                )}
 
-            <WeatherStrip position={position} />
+                {apiState === "ready" && visiblePlaces.length > 0 && (
+                  <section aria-labelledby="feed-heading">
+                    <div className="mb-4 flex items-end justify-between gap-4">
+                      <SectionHeading id="feed-heading" className="mb-0">
+                        {position ? "Runt din plats" : "Fler tips på Gotland"}
+                      </SectionHeading>
+                      <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+                        {visiblePlaces.length.toLocaleString("sv-SE")} träffar
+                      </span>
+                    </div>
+
+                    <div className="gutafinn-place-grid space-y-3">
+                      {listPlaces.map((place) => (
+                        <CompactPlace
+                          key={place.id}
+                          place={place}
+                          isSaved={saved.has(place.id)}
+                          isSelected={selectedPlaceId === place.id}
+                          mapSelectionEnabled={splitLayout}
+                          onToggleSaved={() => toggleSaved(place.id)}
+                          onOpen={() => openDirections(place)}
+                          onSelectMap={() => selectPlaceOnMap(place.id)}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                <WeatherStrip position={position} />
+              </div>
+            </>
+          )}
+        </section>
+
+        {(splitLayout || activeNav === "Karta") && (
+          <div className="gutafinn-map-pane">
+            <GutafinnMap
+              places={visiblePlaces}
+              position={position}
+              locationState={locationState}
+              selectedPlaceId={selectedPlaceId}
+              onRequestLocation={requestLocation}
+              onPlaceSelect={selectPlaceOnMap}
+              className="h-full min-h-0"
+            />
           </div>
-        </>
-      )}
+        )}
+      </div>
 
-      <BottomNavigation active={activeNav} onSelect={selectNavigation} />
+      {!showSurprise && <BottomNavigation active={activeNav} onSelect={selectNavigation} />}
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {selectedPlace ? `${selectedPlace.name} är vald på kartan.` : ""}
+      </p>
     </main>
+  )
+}
+
+function DesktopHeader({
+  active,
+  locationState,
+  onSelect,
+}: {
+  active: string
+  locationState: "idle" | "loading" | "ready" | "unavailable"
+  onSelect: (label: string) => void
+}) {
+  return (
+    <header className="gutafinn-desktop-header">
+      <button type="button" className="gutafinn-brand" onClick={() => onSelect("Hem")}>
+        Guta<span>finn</span>
+      </button>
+      <nav className="flex items-center justify-center gap-1" aria-label="Huvudnavigation för stora skärmar">
+        {navItems.map(({ label, icon: Icon }) => {
+          const isActive = active === label
+          return (
+            <button
+              key={label}
+              type="button"
+              onClick={() => onSelect(label)}
+              aria-current={isActive ? "page" : undefined}
+              className={cn(
+                "flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/40",
+                isActive ? "bg-sea-deep text-sea-deep-foreground" : "text-muted-foreground hover:bg-secondary",
+              )}
+            >
+              <Icon className="size-4" aria-hidden="true" />
+              {label === "Karta" ? "Kartfokus" : label}
+            </button>
+          )
+        })}
+      </nav>
+      <span className="flex min-h-11 items-center gap-2 justify-self-end rounded-full border border-border bg-card px-4 text-xs font-bold text-sea-deep">
+        <span className={cn("size-2 rounded-full", locationState === "ready" ? "bg-meadow" : "bg-sand")} aria-hidden="true" />
+        {locationState === "ready" ? "Live GPS" : "GPS väntar"}
+      </span>
+    </header>
   )
 }
 
@@ -355,7 +452,7 @@ function Hero({
         : `${totalPlaces.toLocaleString("sv-SE")} platser på hela Gotland`
 
   return (
-    <section className="relative h-[440px] overflow-hidden rounded-b-[36px] text-overlay-foreground">
+    <section className="gutafinn-hero relative h-[440px] overflow-hidden rounded-b-[36px] text-overlay-foreground">
       <img
         src={heroCoast}
         alt="Gotländsk kalkstenskust i varmt kvällsljus"
@@ -496,8 +593,8 @@ function FeaturedPlace({
   onNavigate: () => void
 }) {
   return (
-    <Card className="overflow-hidden">
-      <div className="relative h-[238px] overflow-hidden">
+    <Card className="gutafinn-featured-card overflow-hidden">
+      <div className="gutafinn-featured-media relative h-[238px] overflow-hidden">
         <img src={getPlaceImage(place)} alt={place.name} className="size-full object-cover" />
         <Badge className="absolute left-4 top-4 bg-card/92 text-sea-deep backdrop-blur-md">{place.tag}</Badge>
         <Button
@@ -513,7 +610,7 @@ function FeaturedPlace({
         </Button>
       </div>
 
-      <div className="p-5">
+      <div className="gutafinn-featured-body p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sea">{place.kind}</p>
@@ -578,26 +675,46 @@ function PlaceMeta({ place }: { place: PlaceViewModel }) {
 function CompactPlace({
   place,
   isSaved,
+  isSelected,
+  mapSelectionEnabled,
   onToggleSaved,
   onOpen,
+  onSelectMap,
 }: {
   place: PlaceViewModel
   isSaved: boolean
+  isSelected: boolean
+  mapSelectionEnabled: boolean
   onToggleSaved: () => void
   onOpen: () => void
+  onSelectMap: () => void
 }) {
+  const activatePlace = mapSelectionEnabled ? onSelectMap : onOpen
+
   return (
-    <Card className="flex items-center gap-3 rounded-2xl p-3">
-      <button type="button" className="shrink-0 rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40" onClick={onOpen}>
+    <Card
+      id={`place-card-${place.id}`}
+      className={cn(
+        "flex items-center gap-3 rounded-2xl p-3",
+        isSelected && "border-sea ring-3 ring-sea/20",
+      )}
+    >
+      <button type="button" className="shrink-0 rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40" onClick={activatePlace}>
         <img src={getPlaceImage(place)} alt="" className="size-20 rounded-xl object-cover" loading="lazy" />
       </button>
-      <button type="button" className="min-w-0 flex-1 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40" onClick={onOpen}>
+      <button type="button" className="min-w-0 flex-1 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40" onClick={activatePlace}>
         <p className="text-[0.65rem] font-bold uppercase tracking-[0.13em] text-sea">{place.tag}</p>
         <h3 className="mt-1 truncate font-display text-lg leading-tight font-semibold text-sea-deep">{place.name}</h3>
         <div className="mt-2 flex items-center gap-3 text-xs font-semibold text-muted-foreground">
           {place.distanceLabel ? <span>{place.distanceLabel}</span> : <span>{place.kind}</span>}
           <span className={cn(place.opening.kind === "open" && "text-meadow")}>{place.opening.label}</span>
         </div>
+        {mapSelectionEnabled && (
+          <span className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-sea-deep">
+            <MapPin className="size-3.5" aria-hidden="true" />
+            {isSelected ? "Vald på kartan" : "Visa på kartan"}
+          </span>
+        )}
       </button>
       <Button
         type="button"
@@ -718,7 +835,7 @@ function WeatherStrip({ position }: { position: Coordinates | null }) {
 function BottomNavigation({ active, onSelect }: { active: string; onSelect: (label: string) => void }) {
   return (
     <nav
-      className="nav-safe fixed left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-[408px] -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-card/95 p-2 shadow-[var(--shadow-float)] backdrop-blur-xl"
+      className="gutafinn-bottom-nav nav-safe fixed left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-[408px] -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-card/95 p-2 shadow-[var(--shadow-float)] backdrop-blur-xl"
       aria-label="Huvudnavigation"
     >
       {navItems.map(({ label, icon: Icon }) => {
