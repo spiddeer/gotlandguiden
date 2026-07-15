@@ -76,6 +76,8 @@ color alone.
 7. Compact horizontal place cards filtered by search and category.
 8. A sea-deep weather strip.
 9. A fixed safe-area-aware pill navigation for Hem, Karta, Nära and Sparat.
+10. Karta opens an embedded Leaflet atlas view with clustered live places, a GPS marker,
+    keyboard-visible controls and persistently readable OpenStreetMap attribution.
 
 No desktop-specific information architecture is required. On wider screens the
 mobile canvas remains centered on the warm page background.

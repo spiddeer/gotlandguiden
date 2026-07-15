@@ -31,6 +31,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { GutafinnMap } from "@/components/gutafinn-map"
 import {
   countWithinRadius,
   filterPlaces,
@@ -195,16 +196,6 @@ function GutafinnPage() {
   }
 
   function selectNavigation(label: string) {
-    if (label === "Karta") {
-      const center = position ?? LJUGARN
-      window.open(
-        `https://www.openstreetmap.org/#map=11/${center.lat}/${center.lng}`,
-        "_blank",
-        "noopener,noreferrer",
-      )
-      return
-    }
-
     setActiveNav(label)
     if (label === "Hem") {
       setCategory("Allt")
@@ -215,19 +206,28 @@ function GutafinnPage() {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-[440px] overflow-x-hidden bg-background shadow-[var(--shadow-float)]">
-      <Hero
-        totalPlaces={places.length}
-        nearbyCount={nearbyCount}
-        locationState={locationState}
-        onRequestLocation={requestLocation}
-        onShowSaved={() => setActiveNav("Sparat")}
-      />
+      {activeNav === "Karta" ? (
+        <GutafinnMap
+          places={places}
+          position={position}
+          locationState={locationState}
+          onRequestLocation={requestLocation}
+        />
+      ) : (
+        <>
+          <Hero
+            totalPlaces={places.length}
+            nearbyCount={nearbyCount}
+            locationState={locationState}
+            onRequestLocation={requestLocation}
+            onShowSaved={() => setActiveNav("Sparat")}
+          />
 
-      <div className="safe-bottom relative z-10 -mt-7 space-y-8 px-5">
-        <SearchBar query={query} onQueryChange={setQuery} onRequestLocation={requestLocation} />
-        <CategoryFilter selected={category} onSelect={setCategory} />
+          <div className="safe-bottom relative z-10 -mt-7 space-y-8 px-5">
+            <SearchBar query={query} onQueryChange={setQuery} onRequestLocation={requestLocation} />
+            <CategoryFilter selected={category} onSelect={setCategory} />
 
-        {apiState === "error" ? (
+            {apiState === "error" ? (
           <ApiUnavailable onRetry={loadPlaces} />
         ) : apiState === "loading" ? (
           <LoadingPlaces />
@@ -250,7 +250,7 @@ function GutafinnPage() {
           <EmptyPlaces savedView={activeNav === "Sparat"} />
         )}
 
-        {apiState === "ready" && visiblePlaces.length > 0 && (
+            {apiState === "ready" && visiblePlaces.length > 0 && (
           <section aria-labelledby="feed-heading">
             <div className="mb-4 flex items-end justify-between gap-4">
               <SectionHeading id="feed-heading" className="mb-0">
@@ -275,8 +275,10 @@ function GutafinnPage() {
           </section>
         )}
 
-        <WeatherStrip position={position} />
-      </div>
+            <WeatherStrip position={position} />
+          </div>
+        </>
+      )}
 
       <BottomNavigation active={activeNav} onSelect={selectNavigation} />
     </main>

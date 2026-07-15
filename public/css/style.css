@@ -37,6 +37,11 @@
   --shadow-card: 0 2px 10px rgba(12, 37, 47, 0.08);
   --shadow-panel: 0 -12px 30px rgba(12, 37, 47, 0.22);
   --radius: 28px;
+
+  /* Atlasblad: kartplattorna tonas mot varmt papper, i takt med panelen */
+  --map-tile-filter: grayscale(0.35) sepia(0.22) saturate(0.7) hue-rotate(-6deg) brightness(1.05) contrast(0.94);
+  --map-bed: #e9e2d3;
+  --map-vignette: rgba(242, 237, 227, 0.92);
 }
 
 :root[data-theme="dark"] {
@@ -69,6 +74,11 @@
   --shadow-soft: 0 16px 44px rgba(0, 0, 0, 0.45);
   --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.3);
   --shadow-panel: 0 -8px 28px rgba(0, 0, 0, 0.55);
+
+  /* Atlasblad, mörkt: invertering ger korrekt blått vatten/mörk mark igen */
+  --map-tile-filter: invert(1) hue-rotate(180deg) brightness(0.82) contrast(0.88) saturate(0.6) sepia(0.08);
+  --map-bed: #0d161b;
+  --map-vignette: rgba(13, 21, 26, 0.94);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -101,6 +111,9 @@
     --shadow-soft: 0 16px 44px rgba(0, 0, 0, 0.45);
     --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.3);
     --shadow-panel: 0 -8px 28px rgba(0, 0, 0, 0.55);
+    --map-tile-filter: invert(1) hue-rotate(180deg) brightness(0.82) contrast(0.88) saturate(0.6) sepia(0.08);
+    --map-bed: #0d161b;
+    --map-vignette: rgba(13, 21, 26, 0.94);
   }
 }
 
@@ -176,7 +189,7 @@ body {
   width: 100%;
   height: 100%;
   z-index: 1;
-  background: #cfdad8;
+  background: var(--map-bed);
 }
 
 #content-panel {
@@ -802,29 +815,38 @@ body {
   height: 18px;
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
-  border: 2px solid #fff;
+  border: 2px solid #fffaf1;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
+/* "Du är här": stilla bärnstensprick med pulserande ring i accentfärgen */
 .user-marker {
+  position: relative;
   width: 22px;
   height: 22px;
-  background: var(--color-primary);
-  border: 3px solid #fff;
+  background: var(--color-accent);
+  border: 3px solid #fffaf1;
   border-radius: 50%;
-  box-shadow: 0 0 0 rgba(16, 95, 122, 0.54);
-  animation: user-pulse 2.2s infinite;
+  box-shadow: 0 3px 10px rgba(12, 37, 47, 0.35);
+}
+
+.user-marker::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 3px solid var(--color-accent);
+  animation: user-pulse 2.2s ease-out infinite;
 }
 
 @keyframes user-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(16, 95, 122, 0.52);
-  }
-  70% {
-    box-shadow: 0 0 0 16px rgba(16, 95, 122, 0);
+    transform: scale(1);
+    opacity: 0.6;
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(16, 95, 122, 0);
+    transform: scale(1.8);
+    opacity: 0;
   }
 }
 
@@ -1263,7 +1285,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .detail-sheet,
   .detail-card,
-  .user-marker {
+  .user-marker,
+  .user-marker::after {
     animation: none;
   }
 
@@ -1273,7 +1296,200 @@ body {
   .site-tab,
   .mobile-nav-tab,
   .dark-btn,
-  .locate-btn {
+  .locate-btn,
+  .leaflet-control-zoom a {
     transition: none;
+  }
+}
+
+/* ==========================================================================
+   Leaflet-krom – "Atlasblad": kartan som en sida ur samma bok som panelen
+   ========================================================================== */
+
+/* Filtret läggs enbart på tile-panet så att markörer, kluster och kontroller
+   behåller sina egna färger – även när mörkt läge inverterar plattorna. */
+.leaflet-tile-pane {
+  filter: var(--map-tile-filter);
+}
+
+.leaflet-container {
+  font-family: "Sora", "Segoe UI", sans-serif;
+}
+
+/* Vinjett som löser upp skarven där kartan möter bottensheeten (mobil). */
+#map::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 56%, var(--map-vignette) 90%);
+}
+
+/* Zoomkontroll: samma glascirklar som tema-/positionsknapparna. */
+.leaflet-top .leaflet-control-zoom,
+.leaflet-touch .leaflet-top .leaflet-control-zoom {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  margin-top: calc(1.2rem + env(safe-area-inset-top));
+  margin-left: 1.1rem;
+}
+
+.leaflet-bar a.leaflet-control-zoom-in,
+.leaflet-bar a.leaflet-control-zoom-out,
+.leaflet-touch .leaflet-bar a.leaflet-control-zoom-in,
+.leaflet-touch .leaflet-bar a.leaflet-control-zoom-out {
+  width: 52px;
+  height: 52px;
+  line-height: 50px;
+  display: block;
+  text-align: center;
+  border: 1px solid var(--floating-border);
+  border-radius: 50%;
+  background: var(--floating-bg);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 10px 26px rgba(9, 31, 39, 0.18);
+  color: var(--color-primary);
+  font-family: "Sora", "Segoe UI", sans-serif;
+  font-size: 24px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: transform 0.14s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.leaflet-control-zoom a + a {
+  margin-top: 10px;
+}
+
+.leaflet-bar a.leaflet-control-zoom-in:hover,
+.leaflet-bar a.leaflet-control-zoom-out:hover {
+  transform: translateY(-1px);
+  border-color: var(--chip-hover-border);
+  background: var(--floating-bg);
+}
+
+.leaflet-bar a.leaflet-control-zoom-in:active,
+.leaflet-bar a.leaflet-control-zoom-out:active {
+  transform: scale(0.95);
+}
+
+.leaflet-bar a.leaflet-disabled,
+.leaflet-touch .leaflet-bar a.leaflet-disabled {
+  opacity: 0.4;
+  cursor: default;
+  transform: none;
+  background: var(--floating-bg);
+  color: var(--color-text-muted);
+}
+
+/* Attribution: glaschip – etikett, inte knapp (12px hörn i stället för 50%). */
+.leaflet-control-attribution {
+  font-family: "Sora", "Segoe UI", sans-serif;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 5px 11px;
+  border-radius: 12px;
+  border: 1px solid var(--floating-border);
+  background: var(--floating-bg);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  color: var(--color-text-muted);
+  opacity: 0.7;
+  transition: opacity 0.16s ease;
+}
+
+.leaflet-control-attribution:hover,
+.leaflet-control-attribution:focus-within {
+  opacity: 1;
+}
+
+.leaflet-control-attribution a {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* Leaflet-prefixets flagg-svg passar inte chipet (Leaflet sätter själv
+   display:inline !important, därför krävs !important här). */
+.leaflet-control-attribution svg,
+.leaflet-control-attribution .leaflet-attribution-flag {
+  display: none !important;
+}
+
+/* Kluster: bläckstämplade sifferblobbar ur appens palett, serifsiffror. */
+.marker-cluster,
+.leaflet-touch .marker-cluster {
+  background: transparent;
+  background-clip: padding-box;
+}
+
+.marker-cluster div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 48% 52% 50% 50%;
+  border: 3px solid #fffaf1;
+  font-family: "Newsreader", Georgia, serif;
+  font-weight: 700;
+  color: #fffaf1;
+  box-shadow: 0 0 0 5px rgba(255, 250, 241, 0.28), 0 8px 20px rgba(12, 37, 47, 0.3);
+}
+
+.marker-cluster span {
+  line-height: 1;
+}
+
+.marker-cluster-small div {
+  width: 34px;
+  height: 34px;
+  margin: 3px 0 0 3px;
+  font-size: 13px;
+  background: #0f5f7a;
+}
+
+.marker-cluster-medium div {
+  width: 42px;
+  height: 42px;
+  margin: -1px 0 0 -1px;
+  font-size: 15px;
+  background: #d78a3c;
+  color: #3d2408;
+}
+
+.marker-cluster-large div {
+  width: 50px;
+  height: 50px;
+  margin: -5px 0 0 -5px;
+  font-size: 17px;
+  background: #c0603f;
+}
+
+@media (max-width: 767px) {
+  /* Attribution ligger ovanför bottensheeten och förblir läsbar på touchskärmar. */
+  .leaflet-bottom.leaflet-right {
+    bottom: calc(72% + 0.55rem);
+  }
+
+  .leaflet-control-attribution {
+    max-width: calc(100vw - 2rem);
+    padding: 5px 11px;
+    font-size: 11px;
+    line-height: 1.4;
+    border-radius: 12px;
+    opacity: 1;
+  }
+}
+
+@media (max-width: 767px) and (max-height: 700px) {
+  .leaflet-bottom.leaflet-right {
+    bottom: calc(78% + 0.55rem);
+  }
+}
+
+@media (min-width: 768px) {
+  /* Vinjetten flyttar till vänsterkanten där panelen möter kartan. */
+  #map::after {
+    background: linear-gradient(to right, var(--map-vignette) 0px, rgba(255, 255, 255, 0) 620px);
   }
 }
