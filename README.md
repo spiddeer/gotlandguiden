@@ -25,8 +25,10 @@ Produkten kombinerar:
 
 - 440px mobilcanvas med fotografisk kusthero och Live GPS-status
 - Kombinerad sok- och kategorifiltrering for Allt, Gora, Se och Ata
-- Featured-kort med rating, avstand, gangtid, oppetstatus och `Ta mig hit`
-- Fyra mockade platser i `src/routes/index.tsx`
+- Featured-kort med verifieringsdatum, GPS-avstand, gangtid, oppetstatus och `Ta mig hit`
+- Alla 1 345 aktiva platser laddas fran produktions-API:t
+- Verkligt GPS-avstand, uppskattad gangtid och livevader/solnedgang
+- Beständig sparlista i localStorage
 - Fem genererade, optimerade WebP-bilder i `src/assets/`
 - shadcn/ui-komponenter, Lucide-ikoner och semantiska OKLCH-tokens
 - Tillgangliga fokus-, save- och navigationsstates samt safe-area-stod
@@ -166,9 +168,10 @@ Tillatna kategorier:
 - service
 
 API:t fortsatter exponera `/api/categories` och `/api/places`. Gutafinns aktiva
-startsida anvander enligt aktuell designspec fyra mockade kort. Den inbyggda
-OpenStreetMap-snapshoten i `public/` bevaras for importens reproducerbarhet men
-ar inte den frontend som Compose serverar.
+startsida laddar `/api/places`, grupperar API-kategorierna i Gora, Se och Ata,
+och sorterar efter verkligt GPS-avstand nar anvandaren godkanner positionering.
+Den inbyggda OpenStreetMap-snapshoten i `public/` bevaras for importens
+reproducerbarhet men ar inte den frontend som Compose serverar.
 
 ## Databas och import
 
@@ -219,6 +222,7 @@ Frontendens produktionstypning/build kors fran projektroten och backendens
 migrations-, API- och importtester fran `backend/`:
 
 ```bash
+npm test
 npm run build
 cd backend
 npm test
@@ -251,7 +255,7 @@ npm install
 npm run dev
 ```
 
-Verifiera produktionsbygget med `npm run build`.
+Verifiera frontenden med `npm test` och `npm run build`.
 
 ## Produktion och drift
 

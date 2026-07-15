@@ -67,11 +67,11 @@ color alone.
 ## 6. Active mobile composition
 
 1. A 440px-high photographic hero with a rounded 36px lower edge.
-2. Live GPS status and profile control at the safe-area-aware top edge.
-3. Ljugarn location, evening greeting and nearby count in the hero.
-4. A search card overlapping the hero by 28px.
+2. Live GPS status and saved-place control at the safe-area-aware top edge.
+3. Truthful location state, time-aware greeting and real nearby count in the hero.
+4. A search card overlapping the hero by 28px and searching the full API response.
 5. Horizontally scrolling category pills for Allt, Göra, Se and Äta.
-6. A large featured place with save, rating, distance, walk time, opening state
+6. A large featured place with save, source verification, distance, walk time, opening state
    and a poppy-colored `Ta mig hit` action.
 7. Compact horizontal place cards filtered by search and category.
 8. A sea-deep weather strip.
@@ -97,8 +97,11 @@ warm restrained light and no embedded text or logos. Preserve meaningful
 ## 8. Interaction and accessibility
 
 - Category filtering is held in `useState<Category>`.
-- Search and category filters combine without changing source data.
-- Save controls expose `aria-pressed` and an action-specific label.
+- Search and category filters combine across the live `/api/places` response.
+- GPS-derived distance is only shown after successful geolocation.
+- Opening claims require structured source hours; raw hours use a neutral state.
+- Weather and sunset come from Open-Meteo for the user position or Ljugarn fallback.
+- Save controls persist IDs in localStorage and expose `aria-pressed`.
 - The active bottom-nav item uses `aria-current="page"`.
 - All controls show a visible focus ring and meet the 44px target.
 - Honor safe-area insets and `prefers-reduced-motion`.
@@ -106,7 +109,7 @@ warm restrained light and no embedded text or logos. Preserve meaningful
 
 ## 9. Voice
 
-Use concise, local Swedish phrasing: `Närmast dig nu`, `I kväll runt Ljugarn`
+Use concise, local Swedish phrasing: `Närmast dig nu`, `Fler tips på Gotland`
 and `Ta mig hit`. Avoid generic tourism claims, long onboarding copy and English
 interface labels.
 
@@ -116,5 +119,5 @@ interface labels.
 - Hero copy remains readable across the full image crop.
 - Category, search, save and navigation states are keyboard accessible.
 - Generated assets are optimized and committed under `src/assets/`.
-- `npm run build` completes TypeScript and Vite production verification.
+- Root `npm test` verifies data mapping before `npm run build` completes TypeScript and Vite verification.
 - Docker serves `dist/` and continues proxying `/api/*` to the backend.

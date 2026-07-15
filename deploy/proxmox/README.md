@@ -58,6 +58,7 @@ Kontrollera fore deploy att `main` ar pushad och att backendtesterna passerar:
 
 ```bash
 cd /opt/gotlandsguiden
+npm test
 npm run build
 cd /opt/gotlandsguiden/backend
 npm test
@@ -185,5 +186,5 @@ docker-compose -f deploy/proxmox/docker-compose.yml exec backend node -e \
 3. Vid andrad infra/topologi: uppdatera denna fil, `AGENTS.md` och `.github/hooks/README.md`.
 4. Kor aldrig seed/import utan att behalla backup och manuellt berikade falt.
 5. Verifiera Git-SHA, containerstatus och publikt webb/API separat efter deploy.
-6. Verifiera `npm run build` vid frontendandringar; `public/` ar legacy och
+6. Verifiera `npm test` och `npm run build` vid frontendandringar; `public/` ar legacy och
    monteras inte langre av Compose.
