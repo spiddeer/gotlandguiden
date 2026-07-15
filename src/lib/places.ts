@@ -49,6 +49,7 @@ export type OpeningState = {
 
 export type PlaceViewModel = ApiPlace & {
   kind: PlaceCategory
+  kinds: PlaceCategory[]
   tag: string
   distanceKm: number | null
   distanceLabel: string | null
@@ -70,12 +71,46 @@ const curatedPlaceIds = [
   "visby-ringmur-r14377275",
 ]
 
-export function toProductCategory(category: string): PlaceCategory {
-  for (const [productCategory, apiCategories] of Object.entries(categoryGroups)) {
-    if (apiCategories.has(category)) return productCategory as PlaceCategory
+export function toProductCategories(categories: string[]): PlaceCategory[] {
+  const matches: PlaceCategory[] = []
+  for (const category of categories) {
+    for (const [productCategory, apiCategories] of Object.entries(categoryGroups)) {
+      if (apiCategories.has(category) && !matches.includes(productCategory as PlaceCategory)) {
+        matches.push(productCategory as PlaceCategory)
+      }
+    }
   }
+  return matches.length > 0 ? matches : ["Se"]
+}
 
-  return "Se"
+export function toProductCategory(category: string): PlaceCategory {
+  return toProductCategories([category])[0]
+}
+
+export function parseApiPlaces(input: unknown): ApiPlace[] {
+  if (!Array.isArray(input)) throw new Error("API response must be an array")
+  const isPlace = (value: unknown): value is ApiPlace => {
+    if (!value || typeof value !== "object") return false
+    const place = value as Partial<ApiPlace>
+    return (
+      typeof place.id === "string" &&
+      typeof place.name === "string" &&
+      typeof place.category === "string" &&
+      typeof place.description === "string" &&
+      typeof place.lat === "number" &&
+      Number.isFinite(place.lat) &&
+      place.lat >= -90 &&
+      place.lat <= 90 &&
+      typeof place.lng === "number" &&
+      Number.isFinite(place.lng) &&
+      place.lng >= -180 &&
+      place.lng <= 180 &&
+      (place.categories == null ||
+        (Array.isArray(place.categories) && place.categories.every((category) => typeof category === "string")))
+    )
+  }
+  if (!input.every(isPlace)) throw new Error("API response contains an invalid place")
+  return input
 }
 
 export function distanceKilometers(from: Coordinates, to: Coordinates) {
@@ -118,15 +153,31 @@ export function getOpeningState(place: ApiPlace, now = new Date()): OpeningState
   if (raw === "24/7") return { kind: "open", label: "Öppet dygnet runt" }
 
   const weekly = place.openingHours?.weekly ?? []
-  const today = weekly.filter((period) => period.dayOfWeek === now.getDay())
-  if (weekly.length > 0 && today.length === 0) return { kind: "closed", label: "Stängt idag" }
-
-  if (today.length > 0) {
-    const currentMinutes = now.getHours() * 60 + now.getMinutes()
-    const isOpen = today.some((period) => {
+  if (weekly.length > 0) {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Stockholm",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(now)
+    const weekday = parts.find((part) => part.type === "weekday")?.value
+    const dayIndex = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(weekday ?? "")
+    const hour = Number(parts.find((part) => part.type === "hour")?.value ?? 0)
+    const minute = Number(parts.find((part) => part.type === "minute")?.value ?? 0)
+    const currentMinutes = hour * 60 + minute
+    const previousDay = (dayIndex + 6) % 7
+    const isOpen = weekly.some((period) => {
       const opens = timeToMinutes(period.opensAt)
       const closes = timeToMinutes(period.closesAt)
-      return opens != null && closes != null && currentMinutes >= opens && currentMinutes < closes
+      if (opens == null || closes == null) return false
+      if (opens <= closes) {
+        return period.dayOfWeek === dayIndex && currentMinutes >= opens && currentMinutes < closes
+      }
+      return (
+        (period.dayOfWeek === dayIndex && currentMinutes >= opens) ||
+        (period.dayOfWeek === previousDay && currentMinutes < closes)
+      )
     })
 
     return isOpen ? { kind: "open", label: "Öppet nu" } : { kind: "closed", label: "Stängt nu" }
@@ -149,9 +200,11 @@ export function toViewModel(place: ApiPlace, position: Coordinates | null, now =
     : null
   const primaryCategory = place.categoryDetails?.find((category) => category.isPrimary)
 
+  const kinds = toProductCategories(place.categories?.length ? place.categories : [place.category])
   return {
     ...place,
-    kind: toProductCategory(place.category),
+    kind: kinds[0],
+    kinds,
     tag: primaryCategory?.label ?? place.description ?? place.category,
     distanceKm,
     distanceLabel: distanceKm == null ? null : formatDistance(distanceKm),
@@ -173,7 +226,7 @@ export function filterPlaces(
   return places
     .map((place) => toViewModel(place, position))
     .filter((place) => {
-      const matchesCategory = category === "Allt" || place.kind === category
+      const matchesCategory = category === "Allt" || place.kinds.includes(category)
       const matchesQuery =
         normalizedQuery.length === 0 ||
         [place.name, place.description, place.tag]

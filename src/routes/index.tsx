@@ -34,6 +34,7 @@ import { Card } from "@/components/ui/card"
 import {
   countWithinRadius,
   filterPlaces,
+  parseApiPlaces,
   type ApiPlace,
   type Category,
   type Coordinates,
@@ -102,17 +103,20 @@ function GutafinnPage() {
   const [locationState, setLocationState] = useState<"idle" | "loading" | "ready" | "unavailable">("idle")
   const [routeTarget, setRouteTarget] = useState<string | null>(null)
   const requestedLocation = useRef(false)
+  const placeRequestId = useRef(0)
 
   const loadPlaces = useCallback(async () => {
+    const requestId = ++placeRequestId.current
     setApiState("loading")
     try {
       const response = await fetch("/api/places", { headers: { Accept: "application/json" } })
       if (!response.ok) throw new Error("Platsdata kunde inte hämtas")
-      const data = (await response.json()) as ApiPlace[]
-      if (!Array.isArray(data)) throw new Error("Ogiltigt API-svar")
+      const data = parseApiPlaces(await response.json())
+      if (requestId !== placeRequestId.current) return
       setPlaces(data)
       setApiState("ready")
     } catch {
+      if (requestId !== placeRequestId.current) return
       setPlaces([])
       setApiState("error")
     }
@@ -166,7 +170,11 @@ function GutafinnPage() {
     [places, position],
   )
   const featuredPlace = visiblePlaces[0] ?? null
-  const listPlaces = visiblePlaces.slice(featuredPlace ? 1 : 0, query || category !== "Allt" ? 40 : 5)
+  const listStart = featuredPlace ? 1 : 0
+  const listPlaces =
+    activeNav === "Sparat"
+      ? visiblePlaces.slice(listStart)
+      : visiblePlaces.slice(listStart, query || category !== "Allt" ? 40 : 5)
 
   function toggleSaved(placeId: string) {
     setSaved((current) => {
@@ -461,8 +469,12 @@ function FeaturedPlace({
             <h3 className="mt-1 font-display text-[1.7rem] leading-tight font-semibold text-sea-deep">{place.name}</h3>
           </div>
           <span className="flex min-h-9 shrink-0 items-center gap-1 rounded-full bg-sand px-3 text-xs font-bold text-sand-foreground">
-            <CheckCircle2 className="size-4" aria-hidden="true" />
-            {place.verifiedLabel ?? "Källmärkt"}
+            {place.verifiedLabel ? (
+              <CheckCircle2 className="size-4" aria-hidden="true" />
+            ) : (
+              <Clock3 className="size-4" aria-hidden="true" />
+            )}
+            {place.verifiedLabel ?? "Datum saknas"}
           </span>
         </div>
 

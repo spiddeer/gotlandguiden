@@ -6,6 +6,7 @@ import {
   filterPlaces,
   formatDistance,
   getOpeningState,
+  parseApiPlaces,
   toProductCategory,
   type ApiPlace,
 } from "@/lib/places"
@@ -27,6 +28,16 @@ describe("place mapping", () => {
     expect(toProductCategory("strand")).toBe("Göra")
     expect(toProductCategory("natur")).toBe("Se")
     expect(toProductCategory("mat")).toBe("Äta")
+  })
+
+  it("matches filters through secondary API categories", () => {
+    const results = filterPlaces(
+      [place({ category: "service", categories: ["service", "mat"] })],
+      "Äta",
+      "",
+      null,
+    )
+    expect(results).toHaveLength(1)
   })
 
   it("computes honest GPS distance and radius counts", () => {
@@ -56,5 +67,19 @@ describe("place mapping", () => {
         mondayAtNoon,
       ).kind,
     ).toBe("open")
+  })
+
+  it("handles overnight hours in the Gotland timezone", () => {
+    const overnight = place({
+      openingHours: { weekly: [{ dayOfWeek: 1, opensAt: "22:00", closesAt: "02:00" }] },
+    })
+    expect(getOpeningState(overnight, new Date("2026-07-13T21:00:00Z")).kind).toBe("open")
+    expect(getOpeningState(overnight, new Date("2026-07-13T23:00:00Z")).kind).toBe("open")
+    expect(getOpeningState(overnight, new Date("2026-07-14T01:00:00Z")).kind).toBe("closed")
+  })
+
+  it("rejects malformed API payloads before they reach the UI", () => {
+    expect(() => parseApiPlaces([{ name: "Saknar koordinater" }])).toThrow()
+    expect(parseApiPlaces([place()])).toHaveLength(1)
   })
 })

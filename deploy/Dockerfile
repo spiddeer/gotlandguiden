@@ -8,7 +8,7 @@ RUN npm ci
 COPY index.html tsconfig.json vite.config.ts vitest.config.ts components.json ./
 COPY src ./src
 
-RUN npm run build
+RUN npm test && npm run build
 
 FROM nginx:alpine
 

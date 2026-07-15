@@ -39,6 +39,7 @@ Produkten kombinerar:
 ### Frontend
 
 - React 19 + TypeScript + Vite
+- Node.js 22 eller nyare for lokal build och test
 - TanStack Router med file-based routes
 - Tailwind CSS v4 via `@theme inline`
 - shadcn/ui (`new-york`) + Lucide

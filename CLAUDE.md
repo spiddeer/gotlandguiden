@@ -6,6 +6,7 @@ backend and deployment stack.
 ## Stack and operation
 
 - Frontend: React 19, TypeScript, Vite, TanStack Router and Tailwind CSS v4 in `src/`
+- Runtime for frontend tooling: Node.js 22 or newer
 - UI: shadcn/ui `new-york`, Lucide icons, Fraunces and Inter
 - Backend: Node.js, Express and SQLite (`better-sqlite3`) in `backend/`
 - Data: Gutafinn loads the production API and its 1,345-place SQLite dataset
