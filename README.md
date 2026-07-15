@@ -4,7 +4,8 @@ Gutafinn ar den aktiva mobilforst-frontenden for att hitta saker att gora, se
 och ata pa Gotland just nu. Repot innehaller ocksa Gotlandsguidens befintliga
 Express/SQLite-API, OSM-import och Proxmox-drift.
 
-Dokumentationen ar avstamd mot kodbasen och commit `5869c3a` den 14 juli 2026.
+Dokumentationen ar avstamd mot produktionssetupen och release `0637898` den
+15 juli 2026.
 
 ## Live
 
@@ -17,6 +18,7 @@ Produkten kombinerar:
 - GPS-inspirerad Gutafinn-startsida med sokning och kategorifilter
 - Fotografiska kort for narhet, aktivitet, sevardhet och mat
 - Lokal sparstatus och fast mobilnavigation
+- Inbyggd Leaflet-karta med klustrade platser och GPS-markor
 - Vader- och solnedgangsoversikt for Ljugarn
 - Backend-API for lasning/skapande av platser
 - Driftbar setup i Proxmox med Docker Compose, backup och Cloudflare-routing
@@ -27,6 +29,7 @@ Produkten kombinerar:
 - Kombinerad sok- och kategorifiltrering for Allt, Gora, Se och Ata
 - Featured-kort med verifieringsdatum, GPS-avstand, gangtid, oppetstatus och `Ta mig hit`
 - Alla 1 345 aktiva platser laddas fran produktions-API:t
+- Kartflik med OpenStreetMap-plattor, markercluster och permanent synlig attribution
 - Verkligt GPS-avstand, uppskattad gangtid och livevader/solnedgang
 - Beständig sparlista i localStorage
 - Fem genererade, optimerade WebP-bilder i `src/assets/`
@@ -43,6 +46,7 @@ Produkten kombinerar:
 - TanStack Router med file-based routes
 - Tailwind CSS v4 via `@theme inline`
 - shadcn/ui (`new-york`) + Lucide
+- Leaflet 1.9 + Leaflet.markercluster
 - Fraunces + Inter
 
 ### Backend
@@ -62,9 +66,10 @@ Produkten kombinerar:
 ```text
 src/
   assets/                 # fem optimerade Gotlandsbilder
+  components/gutafinn-map.tsx # aktiv Leaflet-karta, kluster och GPS-markor
   components/ui/          # shadcn/ui-grundkomponenter
   routes/                 # TanStack Router-routes
-  styles.css              # Tailwind v4 + semantiska OKLCH-tokens
+  styles.css              # Tailwind v4, Leaflet-krom och semantiska OKLCH-tokens
 deploy/
   Dockerfile              # Vite-build till Nginx
 backend/
@@ -237,6 +242,10 @@ curl -fsS https://gotland.tobtech.se/api/categories
 curl -fsS https://gotland.tobtech.se/api/places
 ```
 
+Verifiera dessutom i en riktig browser att `Karta` oppnar den inbyggda kartan,
+att kluster och kartplattor laddas, att platsantalet ar 1 345 och att
+`OpenStreetMap-bidragsgivare` alltid ar synligt.
+
 ## Kora lokalt (snabbstart)
 
 ### Alternativ A: Docker Compose
@@ -244,7 +253,7 @@ curl -fsS https://gotland.tobtech.se/api/places
 ```bash
 git clone https://github.com/spiddeer/gotlandguiden.git
 cd gotlandguiden
-docker compose up -d --build
+docker-compose -f deploy/proxmox/docker-compose.yml up -d --build
 ```
 
 App: http://localhost:3003
@@ -299,4 +308,5 @@ Nattlig backup hanteras via systemd timer:
 
 ## Status
 
-Projektet ar aktivt i produktion och dokumentation ar uppdaterad for att andra utvecklare och AI-tjanster snabbt ska kunna forsta helheten.
+Projektet ar aktivt i produktion. Gutafinns React-startsida och inbyggda
+Leaflet-karta serveras av Nginx, medan Express/SQLite fortsatt ar datakallan.

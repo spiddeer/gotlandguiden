@@ -1,6 +1,7 @@
 # Gutafinn Design System
 
-Status: implemented as the active frontend contract on 2026-07-14.
+Status: implemented and live as the active frontend contract in release
+`0637898` on 2026-07-15.
 
 ## 1. Product character
 
@@ -23,6 +24,7 @@ Core attributes:
 - Tailwind CSS v4 tokens in `src/styles.css` via `@theme inline`
 - shadcn/ui components using the `new-york` style
 - Lucide icons
+- Leaflet 1.9 and Leaflet.markercluster for the embedded atlas view
 - Fraunces for display typography and Inter for interface typography
 
 Component code must use semantic utilities such as `bg-primary`, `text-sea`
@@ -42,6 +44,8 @@ The authoritative values live in `src/styles.css`.
 - `poppy`: Gotland poppy red, `oklch(0.68 0.18 35)`
 - `meadow`: green for open and available states
 - `overlay`: dark translucent image overlay
+- Map tiles: warm paper treatment via `--map-tile-filter`, `--map-bed`,
+  `--map-vignette` and `--map-control`
 
 All foreground/background pairs must meet WCAG AA. Status must never depend on
 color alone.
@@ -105,6 +109,10 @@ warm restrained light and no embedded text or logos. Preserve meaningful
 - Weather and sunset come from Open-Meteo for the user position or Ljugarn fallback.
 - Save controls persist IDs in localStorage and expose `aria-pressed`.
 - The active bottom-nav item uses `aria-current="page"`.
+- The map renders the full API dataset through marker clusters and uses the GPS
+  position as a separate, non-interactive user marker.
+- OpenStreetMap attribution stays readable without hover, focus or transient
+  active state on both the active React map and preserved legacy map.
 - All controls show a visible focus ring and meet the 44px target.
 - Honor safe-area insets and `prefers-reduced-motion`.
 - The layout must work without horizontal page scrolling at 320px.
@@ -120,6 +128,7 @@ interface labels.
 - All component colors use semantic tokens.
 - Hero copy remains readable across the full image crop.
 - Category, search, save and navigation states are keyboard accessible.
+- Karta loads tiles and clusters without runtime errors and keeps attribution visible.
 - Generated assets are optimized and committed under `src/assets/`.
 - Root `npm test` verifies data mapping before `npm run build` completes TypeScript and Vite verification.
 - Docker serves `dist/` and continues proxying `/api/*` to the backend.

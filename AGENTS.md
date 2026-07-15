@@ -22,13 +22,15 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
 
 ## System Snapshot
 
-- Frontend: React 19 + TypeScript + Vite + TanStack Router + Tailwind CSS v4 i `src/`
+- Frontend: React 19 + TypeScript + Vite + TanStack Router + Tailwind CSS v4,
+  Leaflet och Leaflet.markercluster i `src/`
 - Backend: Node.js + Express + SQLite i `backend/`
 - Deploy: Docker Compose i `deploy/proxmox/`
 - Driftmiljo: Proxmox LXC CT 201 (`gotlandsguiden`)
 - Publik doman: `https://gotland.tobtech.se`
 - Edge-routing: Cloudflare Tunnel (konfig i separat CT 200)
 - Git remote: `https://github.com/spiddeer/gotlandguiden.git`
+- Senast live-verifierade frontendrelease: `0637898` (2026-07-15)
 - Produktionssnapshot: 1 345 aktiva platser, 17 inaktiva historiska platser,
   10 kategorier och 4 databasmigreringar (verifierat 2026-07-14)
 
@@ -39,19 +41,22 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
 1. Docker bygger Vite-frontenden i `deploy/Dockerfile` och kopierar `dist/` till Nginx.
 2. Browser laddar Gutafinn via Nginx-container (`web`).
 3. Gutafinn laddar alla aktiva platser fran `/api/places`, filtrerar och sorterar lokalt.
-4. Browsern ber om geolokalisering for verkligt avstand och hamtar vader fran Open-Meteo.
-5. Nginx proxyar `/api/*` till Express-container (`backend:8080`).
-6. Backend laser/skriver SQLite i monterad volym `deploy/proxmox/data/places.db`.
+4. Kartfliken renderar alla platser i Leaflet-markercluster och laddar kartplattor
+   direkt fran OpenStreetMap med permanent synlig attribution.
+5. Browsern ber om geolokalisering for verkligt avstand/GPS-markor och hamtar vader fran Open-Meteo.
+6. Nginx proxyar `/api/*` till Express-container (`backend:8080`).
+7. Backend laser/skriver SQLite i monterad volym `deploy/proxmox/data/places.db`.
 
 ### Frontendfiler
 
 - `index.html`: Vite-shell, fontlankar och statisk SEO-metadata.
 - `src/routes/__root.tsx`: TanStack Router-root och dynamisk head-metadata.
 - `src/routes/index.tsx`: Gutafinn-startsida, API-laddning, GPS, sokning, filter och sparstatus.
+- `src/components/gutafinn-map.tsx`: aktiv Leaflet-karta, kluster, popups, GPS-markor och OSM-attribution.
 - `src/lib/places.ts`: API-typer, kategorimappning, avstand, oppettider och filtrering.
 - `src/lib/weather.ts`: livevader och solnedgang fran Open-Meteo.
 - `src/lib/places.test.ts`: frontendtester for datamappning och sanningsenliga states.
-- `src/styles.css`: Tailwind v4, `@theme inline` och semantiska OKLCH-tokens.
+- `src/styles.css`: Tailwind v4, Leaflet/markercluster-CSS, `@theme inline` och semantiska OKLCH-tokens.
 - `src/components/ui/`: shadcn/ui-komponenter i `new-york`-stil.
 - `src/assets/`: fem genererade och optimerade Gotlandsbilder.
 - `public/`: bevarad legacy-Leaflet-frontend; monteras inte langre av Compose.
@@ -75,10 +80,13 @@ fortsatt vara `useState<Category>` med `Allt`, `Göra`, `Se` och `Äta`; sokning
 och kategori kombineras i en memoiserad filtrering. Sparstatus och aktiv
 bottom-nav ar lokal UI-state. Sparade plats-id:n lagras beständigt i localStorage
 under `gutafinn_saved_places` och ingar inte i SQLite eller API-kontraktet.
+`Karta` ar en intern React-vy; den far inte bytas tillbaka till en extern lank.
 
 All fargsattning i komponenter ska ga via semantiska tokens fran
 `src/styles.css`. Bevara 440px mobilcanvas, svenska texter, 44px touch targets,
 fokusmarkeringar, safe areas och reduced-motion-stod enligt `DESIGN.md`.
+Leaflet-kontroller, markorer och attribution maste vara tangentbords-/touchbara,
+och OpenStreetMap-krediteringen ska vara permanent lasbar pa alla viewportstorlekar.
 
 ## Data-kontrakt
 
@@ -165,6 +173,9 @@ curl -fsS https://gotland.tobtech.se/api/categories
 curl -fsS https://gotland.tobtech.se/api/places
 ```
 
+Oppna darefter `Karta` i en riktig browser och verifiera Leaflet-container,
+kartplattor, kluster, platsantal och synlig OpenStreetMap-attribution.
+
 ## AI-agent policy (viktigt)
 
 1. Andra aldrig API-schemat utan att uppdatera backend + seed + docs och eventuell ny API-konsument.
@@ -176,6 +187,7 @@ curl -fsS https://gotland.tobtech.se/api/places
 7. Kor backendtester efter andringar i schema, repository, seed eller import.
 8. Hall `backend/seed-data.json` och `public/js/places-data.js` synkroniserade.
 9. Kor `npm test` och `npm run build` efter andringar i `src/`, Vite, Tailwind eller frontend-Dockerbygget.
+10. Vid kartandringar: behall Leaflet-attribution synlig och verifiera med den fulla `/api/places`-mangden.
 
 ## Snabb felsokning
 
@@ -184,6 +196,7 @@ curl -fsS https://gotland.tobtech.se/api/places
 - API-data saknas: kontrollera `GET /api/places` i CT 201 och Gutafinns retry-state.
 - DB-problem: kontrollera att `deploy/proxmox/data/places.db` finns och ar skrivbar.
 - Styling behover skarpas: kontrollera `src/styles.css`, semantiska tokens och Tailwind-klasser.
+- Kartan ar tom: kontrollera `/api/places`, Leaflet-importerna, markercluster och browserkonsolen.
 
 ## Relaterad dokumentation
 

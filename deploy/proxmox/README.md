@@ -10,7 +10,7 @@ Denna runbook beskriver den faktiska produktionssetupen och hur den driftas.
 - Exponerad port i CT 201: `3003`
 - Publik doman: `https://gotland.tobtech.se`
 - Cloudflare Tunnel konfigurerad i separat CT 200
-- Senaste kodbas fore denna dokumentuppdatering: `5869c3a`
+- Senast live-verifierade release: `0637898` (2026-07-15)
 - Datastatus: 1 345 aktiva och 17 inaktiva historiska platser i 10 kategorier
 
 ## Topologi
@@ -20,8 +20,10 @@ Denna runbook beskriver den faktiska produktionssetupen och hur den driftas.
 3. I CT 201 terminerar Nginx-container (`web`) pa port 3003.
 4. `web` byggs i tva steg: Node 22 skapar Gutafinns Vite-`dist/`, som kopieras
    till en ren Nginx-image via `deploy/Dockerfile`.
-5. `web` proxyar `/api/*` till `backend:8080`.
-6. `backend` anvander SQLite i `deploy/proxmox/data/places.db`.
+5. Gutafinns `Karta` laddar OpenStreetMap-plattor direkt i browsern och klustrar
+   `/api/places` med Leaflet.markercluster.
+6. `web` proxyar `/api/*` till `backend:8080`.
+7. `backend` anvander SQLite i `deploy/proxmox/data/places.db`.
 
 Backend kor additiva databasmigreringar automatiskt vid start. Seed-steget
 anvander `UPSERT`, sa befintlig berikning bevaras nar OSM-snapshoten importeras igen.
@@ -67,6 +69,7 @@ npm test
 Root-builden verifierar TanStack-routegenerering, TypeScript och Vite. Docker
 installerar frontendberoenden med `npm ci`, sa Node behover inte finnas pa CT:n
 for normal deploy om Dockerbygget ar den enda verifieringen dar.
+Webbimagen kor dessutom rootens Vitest-svit fore varje produktionsbuild.
 
 ## Grundinstallation (om ny CT byggs)
 
@@ -161,6 +164,16 @@ curl -fsS https://gotland.tobtech.se/api/categories
 curl -fsS https://gotland.tobtech.se/api/places | head
 ```
 
+### Kontrollera den aktiva kartan
+
+Oppna `https://gotland.tobtech.se`, valj `Karta` och verifiera:
+
+1. Aktiv navetikett ar `Karta`.
+2. Platschipet visar 1 345 platser.
+3. OpenStreetMap-plattor och markerkluster laddas.
+4. `OpenStreetMap-bidragsgivare` ar synligt utan hover eller tryck.
+5. Browserkonsolen saknar runtime-undantag.
+
 ### Verifiera release och databas i CT 201
 
 ```bash
@@ -188,3 +201,4 @@ docker-compose -f deploy/proxmox/docker-compose.yml exec backend node -e \
 5. Verifiera Git-SHA, containerstatus och publikt webb/API separat efter deploy.
 6. Verifiera `npm test` och `npm run build` vid frontendandringar; `public/` ar legacy och
    monteras inte langre av Compose.
+7. Kartan ar en browserkonsument av OpenStreetMap: ta aldrig bort eller gom attributionen.

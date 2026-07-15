@@ -4,14 +4,15 @@ Detta dokument forklarar hur hooks i `.github/hooks` hjalper AI-tjanster och utv
 
 ## Syfte
 
-Hooks ska minska regressionsrisk i tre legacy-ytor:
+Hooks ska minska regressionsrisk i tre bevarade legacy-ytor:
 
 1. Fallback-datakvalitet i `public/js/places-data.js`
 2. State/render-disciplin i `public/js/app.js`
 3. Frontendkvalitet i `public/index.html` och `public/css/style.css`
 
 Den aktiva Gutafinn-frontenden finns nu i `src/` och verifieras med Vitest samt
-TypeScript/Vite-build. Befintliga hooks bevakar fortfarande den bevarade
+TypeScript/Vite-build. Den aktiva kartan finns i `src/components/gutafinn-map.tsx`
+med Leaflet-CSS i `src/styles.css`. Befintliga hooks bevakar fortfarande den bevarade
 `public/`-frontenden och ska behandlas som legacy-skydd tills hookscope har
 migrerats till TypeScript/Tailwind. Hooks ar snabba
 redigeringskontroller, inte en full CI-svit. De bevakar inte
@@ -75,6 +76,8 @@ Skyddar mot:
 ## Hur AI-tjanster ska anvanda hooks
 
 1. Kor `npm test` och `npm run build` for alla andringar i `src/`, root-konfig eller frontend-Dockerbygget.
+   Vid kartandringar ska en riktig browser dessutom verifiera kartplattor,
+   kluster, full platsmangd och permanent synlig OpenStreetMap-attribution.
 2. Se hook-varningar for `public/` som krav, inte bara forslag.
 3. Om hook signalerar schemafel: justera dataforandringen direkt.
 4. Om hook signalerar render/state-fel: los problemet innan fler features laggs till.
@@ -95,6 +98,8 @@ Skyddar mot:
    sekundara kategorier samt `CATEGORIES` i fallbacken.
 7. Vid andring i Gutafinn: hall farger tokenbaserade i `src/styles.css`, routefiler
    i `src/routes/` och verifiera datamappning samt TypeScript/Vite med `npm test` och `npm run build`.
+8. Vid andring i `src/components/gutafinn-map.tsx`: behall Leaflet-markercluster,
+   tangentbordsfokus, GPS-markor och OSM-attribution; verifiera mot `/api/places`.
 
 ## Backend- och datasynkronisering
 
@@ -132,6 +137,14 @@ Effekt: UI verkar trasig trots korrekt state.
 Exempel: ny hardkodad hexfarg i komponent.
 
 Effekt: designen blir inkonsekvent mellan ljust/morkt lage.
+
+### Kartan fungerar bara i legacy-vyn
+
+Exempel: nya Leaflet-regler laggs enbart i `public/css/style.css`.
+
+Effekt: produktionen far ingen andring eftersom Compose serverar Vite-`dist/`.
+Aktiv kartkod och kartstil ska ligga i `src/components/gutafinn-map.tsx` respektive
+`src/styles.css`; `public/` ar endast bevarat legacy/fallback.
 
 ## Nar du lagger till en ny hook
 
