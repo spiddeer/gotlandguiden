@@ -10,7 +10,8 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY --chown=node:node src ./src
 COPY --chown=node:node public ./public
-COPY --chown=node:node data ./data
+# No DB baked into the image: the merged deploy mounts the shared ./data
+# volume and points DATABASE_PATH at /data/places.db (see docker-compose).
 
 USER node
 EXPOSE 3000
