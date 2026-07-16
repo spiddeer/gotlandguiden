@@ -1,0 +1,19 @@
+{
+  "name": "gotlandsguiden-cms",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Admin CMS and places API for Gotlandsguiden",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "dev": "node --watch --no-warnings src/server.js",
+    "start": "node --no-warnings src/server.js",
+    "test": "node --no-warnings --test test/cms.test.js",
+    "test:passkey-browser": "node --no-warnings test/passkey-browser.mjs"
+  },
+  "dependencies": {
+    "@simplewebauthn/server": "^13.3.2"
+  }
+}
