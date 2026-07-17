@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - merge-cms
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -86,7 +85,15 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Build frontend image
-        run: docker build -f deploy/Dockerfile .
+        run: docker build -t gutafinn-web-ci -f deploy/Dockerfile .
+      - name: Validate deployed Nginx configuration
+        run: |
+          cmp deploy/nginx.conf deploy/proxmox/nginx.conf
+          docker run --rm \
+            --add-host backend:127.0.0.1 \
+            --add-host cms:127.0.0.1 \
+            -v "$PWD/deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+            gutafinn-web-ci nginx -t
       - name: Build backend image
         run: docker build -f backend/Dockerfile backend
       - name: Build CMS image

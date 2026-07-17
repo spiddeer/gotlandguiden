@@ -265,7 +265,7 @@ const isMain = process.argv[1] && import.meta.url === pathToFileURL(path.resolve
 if (isMain) {
   const app = createApp();
   app.server.listen(app.config.port, app.config.host, () => {
-    console.log(`Gotlandsguiden CMS running at http://${app.config.host}:${app.config.port}`);
+    console.log(`Gutafinn CMS running at http://${app.config.host}:${app.config.port}`);
   });
   const shutdown = () => app.server.close(() => { app.store.close(); process.exit(0); });
   process.on('SIGINT', shutdown);

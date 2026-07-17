@@ -79,6 +79,11 @@ export function GutafinnMap({
   const userMarkerRef = useRef<L.Marker | null>(null)
   const selectedMarkerIdRef = useRef<string | null>(null)
   const hasCenteredOnUserRef = useRef(false)
+  const onPlaceSelectRef = useRef(onPlaceSelect)
+
+  useEffect(() => {
+    onPlaceSelectRef.current = onPlaceSelect
+  }, [onPlaceSelect])
 
   useEffect(() => {
     const container = containerRef.current
@@ -124,21 +129,37 @@ export function GutafinnMap({
     const clusters = clustersRef.current
     if (!clusters) return
 
-    clusters.clearLayers()
-    placeMarkersRef.current.clear()
+    const nextIds = new Set(places.map((place) => place.id))
+    for (const [placeId, marker] of placeMarkersRef.current) {
+      if (nextIds.has(placeId)) continue
+      clusters.removeLayer(marker)
+      marker.off()
+      placeMarkersRef.current.delete(placeId)
+    }
 
     for (const place of places) {
+      const existing = placeMarkersRef.current.get(place.id)
+      if (existing) {
+        const current = existing.getLatLng()
+        if (current.lat !== place.lat || current.lng !== place.lng) {
+          existing.setLatLng([place.lat, place.lng])
+        }
+        existing.setPopupContent(createPopup(place))
+        existing.getElement()?.setAttribute("title", place.name)
+        continue
+      }
+
       const marker = L.marker([place.lat, place.lng], {
-        icon: createPlaceIcon(place.id === selectedPlaceId),
+        icon: createPlaceIcon(place.id === selectedMarkerIdRef.current),
         keyboard: true,
         title: place.name,
       })
       marker.bindPopup(createPopup(place), { closeButton: true, maxWidth: 260 })
-      marker.on("click", () => onPlaceSelect?.(place.id))
+      marker.on("click", () => onPlaceSelectRef.current?.(place.id))
       placeMarkersRef.current.set(place.id, marker)
       clusters.addLayer(marker)
     }
-  }, [onPlaceSelect, places])
+  }, [places])
 
   useEffect(() => {
     const map = mapRef.current

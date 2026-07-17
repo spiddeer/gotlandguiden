@@ -137,6 +137,9 @@ warm restrained light and no embedded text or logos. Preserve meaningful
   provide truthful copy and a clear next action where one exists.
 - Adventure photography is labelled `Stämningsbild från Gotland`; never imply
   that a category asset depicts the recommended place.
+- Featured fallback photography is labelled the same way. Compact place cards
+  without a sourced API image use a neutral location placeholder instead of
+  presenting stock photography as the place itself.
 - Preserve time and travel mode across rerolls, avoid the first five place
   repetitions when the pool permits and bound local history to 20 entries.
 - The active bottom-nav item uses `aria-current="page"`.
@@ -150,6 +153,9 @@ warm restrained light and no embedded text or logos. Preserve meaningful
 - OpenStreetMap attribution stays readable without hover, focus or transient
   active state on both the active React map and preserved legacy map.
 - All controls show a visible focus ring and meet the 44px target.
+- A keyboard-visible skip link moves focus directly to the discovery feed.
+- Blocked geolocation is announced as blocked and never labelled as an active
+  or available GPS state.
 - Honor safe-area insets and `prefers-reduced-motion`.
 - The layout must work without horizontal page scrolling at 320px.
 - At 768/820px the layout remains a generous single column; at 1024px landscape,
@@ -170,8 +176,9 @@ interface labels.
   all three travel modes and five consecutive rerolls.
 - Each surprise navigation action uses the correct OpenStreetMap direction engine.
 - Karta loads tiles and clusters without runtime errors and keeps attribution visible.
-- Filtering preserves the Leaflet instance; list and marker selection stay
-  synchronized; `Kartfokus -> Hem` preserves active category and feed mode.
+- Filtering preserves the Leaflet instance and reuses unchanged markers; list
+  and marker selection stay synchronized; `Kartfokus -> Hem` preserves active
+  category and feed mode.
 - Browser smoke covers 320, 390, 768, 820, 1024 landscape, 1280 and 1440px,
   including denied GPS and horizontal-overflow checks.
 - `src/components/gutafinn-map.test.tsx` covers one-time map initialization,

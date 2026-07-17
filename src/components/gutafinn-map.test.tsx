@@ -14,6 +14,7 @@ const doubles = vi.hoisted(() => {
     openPopup: ReturnType<typeof vi.fn>
     setIcon: ReturnType<typeof vi.fn>
     setLatLng: ReturnType<typeof vi.fn>
+    setPopupContent: ReturnType<typeof vi.fn>
     remove: ReturnType<typeof vi.fn>
     getLatLng: ReturnType<typeof vi.fn>
   }> = []
@@ -28,6 +29,7 @@ const doubles = vi.hoisted(() => {
   const clusters = {
     addLayer: vi.fn(),
     clearLayers: vi.fn(),
+    removeLayer: vi.fn(),
     zoomToShowLayer: vi.fn((_marker: unknown, callback: () => void) => callback()),
   }
   const map = vi.fn(() => mapInstance)
@@ -43,6 +45,7 @@ const doubles = vi.hoisted(() => {
       openPopup: vi.fn(),
       setIcon: vi.fn(),
       setLatLng: vi.fn(),
+      setPopupContent: vi.fn(),
       remove: vi.fn(),
       getLatLng: vi.fn(() => _latLng),
     }
@@ -54,6 +57,8 @@ const doubles = vi.hoisted(() => {
         handlers[event] = handler
         return markerDouble
       }),
+      off: vi.fn(() => markerDouble),
+      getElement: vi.fn(() => null),
     }
     markerRecords.push({ ...record, bindPopup: markerDouble.bindPopup })
     return markerDouble
@@ -146,7 +151,8 @@ describe("GutafinnMap lifecycle", () => {
     })
 
     expect(doubles.map).toHaveBeenCalledTimes(1)
-    expect(doubles.clusters.clearLayers).toHaveBeenCalledTimes(1)
+    expect(doubles.clusters.clearLayers).not.toHaveBeenCalled()
+    expect(doubles.marker).toHaveBeenCalledTimes(3)
     expect(doubles.mapInstance.setView).toHaveBeenCalledWith([57.63, 18.29], 12)
 
     await act(async () => root.unmount())
@@ -160,7 +166,8 @@ describe("GutafinnMap lifecycle", () => {
     await renderMap(root, { selectedPlaceId: "second" })
 
     expect(doubles.map).toHaveBeenCalledTimes(1)
-    expect(doubles.clusters.clearLayers).toHaveBeenCalledTimes(1)
+    expect(doubles.clusters.clearLayers).not.toHaveBeenCalled()
+    expect(doubles.marker).toHaveBeenCalledTimes(2)
     expect(doubles.clusters.zoomToShowLayer).toHaveBeenCalledTimes(2)
     expect(doubles.mapInstance.panTo).toHaveBeenCalledTimes(2)
 
@@ -180,6 +187,18 @@ describe("GutafinnMap lifecycle", () => {
     const first = doubles.markerRecords.find((record) => record.options.title === "Första platsen")
     act(() => first?.handlers.click())
     expect(onPlaceSelect).toHaveBeenCalledWith("first")
+
+    await act(async () => root.unmount())
+  })
+
+  it("removes filtered markers without rebuilding markers that remain", async () => {
+    const root = createRoot(document.getElementById("root")!)
+    await renderMap(root)
+    await renderMap(root, { places: [places[0]] })
+
+    expect(doubles.marker).toHaveBeenCalledTimes(2)
+    expect(doubles.clusters.removeLayer).toHaveBeenCalledTimes(1)
+    expect(doubles.clusters.clearLayers).not.toHaveBeenCalled()
 
     await act(async () => root.unmount())
   })

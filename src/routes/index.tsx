@@ -97,6 +97,14 @@ function loadSavedIds() {
   }
 }
 
+function saveSavedIds(saved: Set<string>) {
+  try {
+    localStorage.setItem(SAVED_KEY, JSON.stringify([...saved]))
+  } catch {
+    // Saved places remain available for the current session when storage is blocked.
+  }
+}
+
 function getGreeting() {
   const hour = new Date().getHours()
   if (hour < 5) return "God natt"
@@ -123,13 +131,23 @@ function useMediaQuery(query: string) {
 
 function getPlaceImage(place: ApiPlace) {
   const apiImage = place.images?.[0]?.url
-  if (apiImage) return apiImage
+  if (apiImage) {
+    return {
+      src: apiImage,
+      alt: place.images?.[0]?.altText || place.name,
+      moodImage: false,
+    }
+  }
 
   const name = place.name.toLocaleLowerCase("sv")
-  if (name.includes("folhammar") || place.category === "natur") return raukarSea
-  if (name.includes("tofta") || place.category === "strand") return toftaBeach
-  if (name.includes("bakfickan") || place.category === "mat") return saffronPancake
-  return visbyRoses
+  const src = name.includes("folhammar") || place.category === "natur"
+    ? raukarSea
+    : name.includes("tofta") || place.category === "strand"
+      ? toftaBeach
+      : name.includes("bakfickan") || place.category === "mat"
+        ? saffronPancake
+        : visbyRoses
+  return { src, alt: "Stämningsbild från Gotland", moodImage: true }
 }
 
 function GutafinnPage() {
@@ -195,7 +213,7 @@ function GutafinnPage() {
   }, [requestLocation])
 
   useEffect(() => {
-    localStorage.setItem(SAVED_KEY, JSON.stringify([...saved]))
+    saveSavedIds(saved)
   }, [saved])
 
   const visiblePlaces = useMemo(
@@ -287,10 +305,18 @@ function GutafinnPage() {
 
   return (
     <main className="gutafinn-app min-h-screen w-full overflow-x-hidden bg-background">
+      <a className="gutafinn-skip-link" href="#discovery-content">
+        Hoppa till innehållet
+      </a>
       <DesktopHeader active={activeNav} locationState={locationState} onSelect={selectNavigation} />
 
       <div className={cn("gutafinn-responsive-shell", activeNav === "Karta" && "is-map-focus")}>
-        <section className="gutafinn-feed" aria-label={showSurprise ? "Överraska mig" : "Upptäck platser"}>
+        <section
+          id="discovery-content"
+          tabIndex={-1}
+          className="gutafinn-feed"
+          aria-label={showSurprise ? "Överraska mig" : "Upptäck platser"}
+        >
           {showSurprise ? (
             <SurpriseAdventure
               places={places}
@@ -487,6 +513,8 @@ function Hero({
   const statusText =
     locationState === "loading"
       ? "Söker din position…"
+      : locationState === "unavailable"
+        ? "Platsåtkomst är blockerad – ändra behörigheten i webbläsaren"
       : nearbyCount != null
         ? `${nearbyCount.toLocaleString("sv-SE")} platser inom 5 km`
         : `${totalPlaces.toLocaleString("sv-SE")} platser på hela Gotland`
@@ -506,7 +534,7 @@ function Hero({
           <button
             type="button"
             onClick={onRequestLocation}
-            className="flex h-10 items-center gap-2 rounded-full bg-overlay px-4 text-xs font-semibold tracking-wide outline-none backdrop-blur-md focus-visible:ring-[3px] focus-visible:ring-overlay-foreground/55"
+            className="flex min-h-11 items-center gap-2 rounded-full bg-overlay px-4 text-xs font-semibold tracking-wide outline-none backdrop-blur-md focus-visible:ring-[3px] focus-visible:ring-overlay-foreground/55"
           >
             {locationState === "loading" ? (
               <LoaderCircle className="size-4 animate-spin text-sand" aria-hidden="true" />
@@ -523,7 +551,11 @@ function Hero({
                 />
               </span>
             )}
-            {locationState === "ready" ? "Live GPS" : "Aktivera GPS"}
+            {locationState === "ready"
+              ? "Live GPS"
+              : locationState === "unavailable"
+                ? "GPS blockerad"
+                : "Aktivera GPS"}
           </button>
 
           <button
@@ -549,7 +581,9 @@ function Hero({
             {getGreeting()},
             <span className="block italic">upptäck närmast.</span>
           </h1>
-          <p className="mt-4 text-sm font-medium text-overlay-foreground/85">{statusText}</p>
+          <p className="mt-4 text-sm font-medium text-overlay-foreground/85" role="status" aria-live="polite">
+            {statusText}
+          </p>
         </div>
       </div>
     </section>
@@ -634,10 +668,16 @@ function FeaturedPlace({
   onShowDetails: () => void
   onNavigate: () => void
 }) {
+  const image = getPlaceImage(place)
   return (
     <Card className="gutafinn-featured-card overflow-hidden">
       <div className="gutafinn-featured-media relative h-[238px] overflow-hidden">
-        <img src={getPlaceImage(place)} alt={place.name} className="size-full object-cover" />
+        <img src={image.src} alt={image.alt} className="size-full object-cover" />
+        {image.moodImage && (
+          <span className="absolute bottom-3 left-4 rounded-full bg-overlay px-3 py-1 text-[0.68rem] font-semibold text-overlay-foreground backdrop-blur-md">
+            Stämningsbild från Gotland
+          </span>
+        )}
         <Badge className="absolute left-4 top-4 max-w-[calc(100%-5.5rem)] truncate bg-card/92 text-sea-deep backdrop-blur-md">
           {place.tag}
         </Badge>
@@ -802,6 +842,9 @@ export function PlaceDetailsDialog({
         event.preventDefault()
         onClose()
       }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
       className="fixed inset-x-0 bottom-0 top-auto m-0 max-h-[92svh] w-full max-w-none overflow-hidden rounded-t-[2rem] border border-border bg-card p-0 text-foreground shadow-[var(--shadow-float)] backdrop:bg-overlay/75 backdrop:backdrop-blur-sm sm:inset-0 sm:m-auto sm:max-w-[640px] sm:rounded-[2rem]"
     >
       <div className="max-h-[92svh] overflow-y-auto overscroll-contain">
@@ -916,6 +959,7 @@ function CompactPlace({
   onShowDetails: () => void
   onSelectMap: () => void
 }) {
+  const image = getPlaceImage(place)
   return (
     <Card
       id={`place-card-${place.id}`}
@@ -925,7 +969,13 @@ function CompactPlace({
       )}
     >
       <button type="button" className="shrink-0 rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40" onClick={onShowDetails} aria-label={`Visa information om ${place.name}`}>
-        <img src={getPlaceImage(place)} alt="" className="size-20 rounded-xl object-cover" loading="lazy" />
+        {image.moodImage ? (
+          <span className="grid size-20 place-items-center rounded-xl bg-limestone text-sea-deep" aria-hidden="true">
+            <MapPin className="size-6" />
+          </span>
+        ) : (
+          <img src={image.src} alt="" className="size-20 rounded-xl object-cover" loading="lazy" />
+        )}
       </button>
       <button type="button" className="min-w-0 flex-1 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40" onClick={onShowDetails}>
         <p className="text-[0.65rem] font-bold uppercase tracking-[0.13em] text-sea">{place.tag}</p>
@@ -945,7 +995,7 @@ function CompactPlace({
             type="button"
             variant="ghost"
             size="icon"
-            className="size-10"
+            className="size-11"
             aria-label={isSelected ? `${place.name} är vald på kartan` : `Visa ${place.name} på kartan`}
             aria-pressed={isSelected}
             onClick={onSelectMap}
@@ -957,7 +1007,7 @@ function CompactPlace({
           type="button"
           variant="ghost"
           size="icon"
-          className="size-10"
+          className="size-11"
           aria-label={isSaved ? `Ta bort ${place.name} från sparade` : `Spara ${place.name}`}
           aria-pressed={isSaved}
           onClick={onToggleSaved}

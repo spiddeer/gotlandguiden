@@ -53,6 +53,8 @@ test("the API creates, reads, and enriches a place", async () => {
 
     const listResponse = await fetch(`${baseUrl}/api/places`);
     assert.equal(listResponse.status, 200);
+    assert.match(listResponse.headers.get("cache-control"), /stale-while-revalidate/);
+    assert.ok(listResponse.headers.get("etag"));
     assert.equal((await listResponse.json()).length, 1);
   });
 });

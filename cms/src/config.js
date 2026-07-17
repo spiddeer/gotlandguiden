@@ -9,7 +9,7 @@ export function getConfig(overrides = {}) {
   const host = env.HOST || '127.0.0.1';
   const port = Number.parseInt(env.PORT || '3000', 10);
   const adminPassword = env.ADMIN_PASSWORD || (production ? '' : 'gotland');
-  const sessionSecret = env.SESSION_SECRET || (production ? '' : 'dev-only-change-me-gotlandsguiden');
+  const sessionSecret = env.SESSION_SECRET || (production ? '' : 'dev-only-change-me-gutafinn-cms');
   const signupCode = env.SIGNUP_CODE || (production ? '' : 'gotland-passkey');
   const localHost = ['0.0.0.0', '127.0.0.1', '::1'].includes(host);
   const hasRpId = Boolean(env.PASSKEY_RP_ID);
@@ -60,7 +60,7 @@ export function getConfig(overrides = {}) {
     signupEnabled: Boolean(signupCode && passkeyConfigured),
     passkeyRpId,
     passkeyOrigin,
-    passkeyRpName: env.PASSKEY_RP_NAME || 'Gotlandsguiden CMS',
+    passkeyRpName: env.PASSKEY_RP_NAME || 'Gutafinn CMS',
     production,
     secureCookies: production || env.SECURE_COOKIES === 'true',
   };

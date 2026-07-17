@@ -14,7 +14,8 @@ Den aktiva Gutafinn-frontenden finns nu i `src/` och verifieras med Vitest samt
 TypeScript/Vite-build. Den aktiva kartan finns i `src/components/gutafinn-map.tsx`,
 har livscykeltester i `src/components/gutafinn-map.test.tsx` och Leaflet-CSS i
 `src/styles.css`. Befintliga hooks bevakar fortfarande den bevarade
-`public/`-frontenden och ska behandlas som legacy-skydd tills hookscope har
+`public/`-frontenden, som uttryckligen exkluderas ur Vite-builden, och ska
+behandlas som legacy-/importskydd tills hookscope har
 migrerats till TypeScript/Tailwind. Hooks ar snabba
 redigeringskontroller, inte en full CI-svit. De bevakar inte
 `backend/seed-data.json`, `backend/import-osm.js`, databasmigreringar eller API:t.
@@ -80,7 +81,8 @@ Skyddar mot:
    Vid kartandringar ska en riktig browser dessutom verifiera kartplattor,
    kluster, full platsmangd, tvavagsval, stabil kartinstans och permanent synlig
    OpenStreetMap-attribution.
-2. Se hook-varningar for `public/` som krav, inte bara forslag.
+2. Se hook-varningar for `public/` som krav for reproducerbar legacy/importdata,
+   men skilj dem fran WCAG-resultat for den aktiva React-frontenden.
 3. Om hook signalerar schemafel: justera dataforandringen direkt.
 4. Om hook signalerar render/state-fel: los problemet innan fler features laggs till.
 5. Om hook signalerar CSS/HTML-problem: bevara mobilforst och tillganglighet.
@@ -114,6 +116,9 @@ Skyddar mot:
     aterstallbart kartfokus utan tappade filter.
 11. Vid andring i platsinformation: verifiera informationspanelen med komplett
     data och med saknad adress/kontakt/oppettid; kalla och koordinater ska alltid synas.
+12. Vid Nginx-/headerandringar: bygg web-imagen och kor `nginx -t`. Publik CSP
+    maste tillata GPS, Open-Meteo, Google Fonts och HTTPS-kartplattor; CMS har
+    en separat strikt policy.
 
 `Overraska mig` ska fortsatt ha ren, testbar domanlogik i `src/lib/surprise.ts`,
 begransad localStorage-hantering i `src/lib/surprise-storage.ts` och UI i

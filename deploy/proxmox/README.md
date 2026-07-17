@@ -20,22 +20,27 @@ Denna runbook beskriver den faktiska produktionssetupen och hur den driftas.
    `gotland.tobtech.se` gar genom samma tunnel och redirectas av Nginx.
 2. Cloudflare Tunnel route i CT 200 skickar vidare till `http://192.168.1.224:3003`.
 3. I CT 201 terminerar Nginx-container (`web`) pa port 3003.
-4. `web` byggs i tva steg: Node 22 skapar Gutafinns Vite-`dist/`, som kopieras
-   till en ren Nginx-image via `deploy/Dockerfile`.
-5. Gutafinn laddar OpenStreetMap-plattor direkt i browsern och klustrar
+4. Backend initierar/migrerar domanschemat och exponerar healthcheck. CMS vantar
+   pa gron backend-health och vagrar en oinitierad databas.
+5. `web` byggs i tva steg: Node 22 skapar Gutafinns Vite-`dist/` utan legacy-
+   `public/`, som kopieras till en ren Nginx-image via `deploy/Dockerfile`.
+6. Nginx skickar separata CSP-/browserpolicyer for publik app och CMS, gzippar
+   textresurser och ger hashade assets immutable cache.
+7. Gutafinn laddar OpenStreetMap-plattor direkt i browsern och klustrar
    `/api/places` med Leaflet.markercluster. Mobil/iPad oppnar kartan via `Karta`;
    desktop visar en permanent feed/karta-split med aterstallbart kartfokus.
-6. `Overraska mig` kor helt i browsern mot samma API-svar, anvander browser-GPS
+8. `Overraska mig` kor helt i browsern mot samma API-svar, anvander browser-GPS
    och lagrar endast begransad preferens-/visningshistorik i localStorage.
-7. `web` proxyar `/api/*` till `backend:8080`.
-8. `backend` anvander SQLite i `deploy/proxmox/data/places.db`.
+9. `web` proxyar `/api/*` till `backend:8080`.
+10. `backend` anvander SQLite i `deploy/proxmox/data/places.db`.
 
 Backend kor additiva databasmigreringar automatiskt vid start. Seed-steget
 anvander `UPSERT`, sa befintlig berikning bevaras nar OSM-snapshoten importeras igen.
 Tidigare OSM-poster som saknas i den nya snapshoten markeras inaktiva men ligger
 kvar i SQLite for historik och eventuell manuell berikning.
 
-Fyra migreringar ar aktiva. Migrering 4 kallmarker importerade
+Backend ar ensam agare av domanschemat. Fyra migreringar ar aktiva. Migrering 4
+kallmarker importerade
 kategorikopplingar, sa nya OSM-snapshots kan synka just de kopplingarna utan att
 ta bort manuellt tillagda kategorier. Publika API-anrop visar bara
 `is_active = 1` medan inaktiva poster behalls i databasen.
@@ -68,6 +73,8 @@ cd /opt/gutafinn
 npm test
 npm run build
 cd /opt/gutafinn/backend
+npm test
+cd /opt/gutafinn/cms
 npm test
 ```
 
@@ -118,6 +125,10 @@ Satt i `.env`:
 
 - `WEB_PORT` (normalt `3003`)
 - `API_KEY` (rekommenderas i produktion)
+- `ADMIN_PASSWORD` och minst 32 tecken lang `SESSION_SECRET`
+- `PASSKEY_RP_ID=gutafinn-admin.tobtech.se` och
+  `PASSKEY_ORIGIN=https://gutafinn-admin.tobtech.se` for passkeys
+- `SIGNUP_CODE` endast medan nya CMS-konton ska kunna registreras
 
 ### 4) Starta stacken
 
@@ -183,8 +194,10 @@ docker-compose -f /opt/gutafinn/deploy/proxmox/docker-compose.yml ps
 
 ```bash
 curl -fsSI https://gutafinn.tobtech.se
+curl -fsSI https://gutafinn.tobtech.se/index.html
 curl -fsS https://gutafinn.tobtech.se/api/categories
 curl -fsS https://gutafinn.tobtech.se/api/places | head
+curl -fsSI https://gutafinn-admin.tobtech.se/admin/login
 ```
 
 ### Kontrollera den aktiva kartan
@@ -220,6 +233,8 @@ docker-compose -f deploy/proxmox/docker-compose.yml exec backend node -e \
    att `package-lock.json`, `src/` och `deploy/Dockerfile` finns i aktuell SHA.
 3. API svarar inte: kontrollera `backend`-container och DB-volym.
 4. Domanen svarar inte: kontrollera cloudflared-process i CT 200 och ingress-regel.
+5. GPS, vader eller typsnitt blockeras: kontrollera public CSP och
+   `Permissions-Policy` i `deploy/nginx-public-headers.conf`.
 
 ## Viktiga regler
 

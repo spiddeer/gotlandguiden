@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Gutafinn</title>
+  <rect width="64" height="64" rx="16" fill="#123f4b"/>
+  <path d="M32 11c-10.5 0-19 8.5-19 19 0 14.2 19 25 19 25s19-10.8 19-25c0-10.5-8.5-19-19-19Z" fill="#e5683c"/>
+  <circle cx="32" cy="30" r="8" fill="#f8f3e9"/>
+</svg>

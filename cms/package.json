@@ -1,8 +1,8 @@
 {
-  "name": "gotlandsguiden-cms",
+  "name": "gutafinn-cms",
   "version": "1.0.0",
   "private": true,
-  "description": "Admin CMS and places API for Gotlandsguiden",
+  "description": "Admin CMS and places API for Gutafinn",
   "type": "module",
   "engines": {
     "node": ">=22.5"

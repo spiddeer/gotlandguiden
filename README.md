@@ -3,13 +3,15 @@
 Gutafinn ar den aktiva responsiva, mobilforst-frontenden for att hitta saker att
 gora, se och ata pa Gotland just nu. Samma React-app fungerar som enkelkolumn pa
 mobil och iPad samt som synkroniserad feed/karta pa desktop. Repot innehaller
-ocksa Gutafinns befintliga Express/SQLite-API, OSM-import och Proxmox-drift.
+ocksa Gutafinns Express/SQLite-API, passkey-skyddade CMS, OSM-import och
+Proxmox-drift.
 
-Varje push och pull request verifieras av GitHub Actions med frontendtest och
+Varje push till `main` och varje pull request verifieras av GitHub Actions med frontendtest och
 bygge, backend- och CMS-tester, tom databasstart, Compose-validering samt alla
-tre Dockerbyggen.
+tre Dockerbyggen. Den driftsatta Nginx-konfigurationen syntaxkontrolleras ocksa
+mot den byggda webbimagen.
 
-Dokumentationen ar avstamd mot produktionssetupen den 15 juli 2026. Aktuell
+Dokumentationen ar avstamd mot produktionssetupen den 17 juli 2026. Aktuell
 driftsatt Git-SHA verifieras med kommandot i Proxmox-runbooken.
 
 ## Live
@@ -28,6 +30,7 @@ Produkten kombinerar:
 - Vader- och solnedgangsoversikt for Ljugarn
 - Backend-API for lasning/skapande av platser
 - Driftbar setup i Proxmox med Docker Compose, backup och Cloudflare-routing
+- Passkey-skyddat CMS for redigering, arkivering och aterstallning av platser
 
 ## Huvudfunktioner
 
@@ -46,13 +49,15 @@ Produkten kombinerar:
 - Den kuraterade snapshoten innehaller 977 besoksmal; bensin, laddning, boende,
   generisk handel och vanlig service ingar inte i den publika katalogen
 - Synkroniserad Leaflet-karta: listval fokuserar markor och markorklick lyfter
-  motsvarande kort utan att kartinstansen byggs om
+  motsvarande kort utan att kartinstansen eller oforandrade markorer byggs om
 - OpenStreetMap-plattor, markercluster och permanent synlig attribution
 - Verkligt GPS-avstand, uppskattad gangtid och livevader/solnedgang
 - Beständig sparlista i localStorage
 - Fem genererade, optimerade WebP-bilder i `src/assets/`
 - shadcn/ui-komponenter, Lucide-ikoner och semantiska OKLCH-tokens
 - Tillgangliga fokus-, save- och navigationsstates samt safe-area-stod
+- Skip-lank, sanningsenliga GPS-states, 44px touchytor och tydligt markerade
+  stamningsbilder
 - Befintligt API med rik platsdata fortsatt tillgangligt under `/api/*`
 
 ## Tech stack
@@ -94,6 +99,8 @@ src/
   styles.css              # Tailwind v4, Leaflet-krom och semantiska OKLCH-tokens
 deploy/
   Dockerfile              # Vite-build till Nginx
+  nginx-public-headers.conf # CSP och browserpolicy for den publika appen
+  nginx-admin-headers.conf  # strikt separat policy for CMS-hostnamnet
 backend/
   db.js
   import-osm.js
@@ -106,7 +113,11 @@ backend/
   package.json
   test/
 
-public/                    # bevarad legacy-Leaflet-frontend
+cms/                       # passkey-/reservkontoskyddad platsadministration
+  src/
+  test/
+
+public/                    # bevarad legacy-Leaflet-frontend; exkluderas ur Vite-build
   index.html
   css/style.css
   js/app.js
@@ -222,12 +233,16 @@ Tillatna kategorier:
 API:t fortsatter exponera `/api/categories` och `/api/places`. Gutafinns aktiva
 startsida laddar `/api/places`, mappar kategorierna till sju begripliga
 besoksteman och sorterar efter verkligt GPS-avstand nar anvandaren godkanner positionering.
+Publika GET-svar kan cachelagras i fem minuter och atervalideras med ETag;
+`/healthz` skickas alltid med `Cache-Control: no-store`. Skrivnyckeln jamfors
+med konstant-tidsjämforelse.
 Den inbyggda OpenStreetMap-snapshoten i `public/` bevaras for importens
-reproducerbarhet men ar inte den frontend som Compose serverar.
+reproducerbarhet men ar inte den frontend som Compose eller Vite serverar.
 
 ## Databas och import
 
-- Migreringar kors automatiskt nar backend startar.
+- Backend ar ensam agare av domanschemat och kor migreringar automatiskt vid
+  start. CMS startar forst efter gron backend-health och vagrar en oinitierad DB.
 - `npm run seed` anvander `UPSERT` och kan koras flera ganger.
 - Seed uppdaterar OpenStreetMaps karndata och fyller adress, kontaktuppgifter och
   oppettider nar de finns i kallan. Manuellt berikade falt skrivs inte tomma.
@@ -282,6 +297,8 @@ npm test
 npm run build
 cd backend
 npm test
+cd ../cms
+npm test
 ```
 
 Efter deploy ska bade webb och API verifieras:
@@ -318,6 +335,17 @@ npm run dev
 ```
 
 Verifiera frontenden med `npm test` och `npm run build`.
+
+## Sakerhet och leverans
+
+Nginx skickar separata sakerhetspolicyer for publik app och CMS. Den publika
+policyn tillater endast de externa resurser appen faktiskt anvander: Google
+Fonts, Open-Meteo och HTTPS-kartbilder. Inline-stilar tillats eftersom Leaflet
+positionerar kartlager via DOM-stilar; inline-script ar fortsatt blockerat. GPS
+ar tillaten for den egna origin.
+Hashade Vite-assets far ett ars immutable cache, `index.html` atervalideras och
+API-cachen styrs av backend. Rootens beroenden ar fastlagda med avsiktliga
+semver-intervall och verifieras via lockfilen i CI och Dockerbygget.
 
 ## Produktion och drift
 

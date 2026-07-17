@@ -10,6 +10,8 @@ Gutafinn backend and deployment stack.
 - Runtime for frontend tooling: Node.js 22 or newer
 - UI: shadcn/ui `new-york`, Lucide icons, Fraunces and Inter
 - Backend: Node.js, Express and SQLite (`better-sqlite3`) in `backend/`
+- CMS: Node.js adminapp med passkeys/reservkonto i `cms/`; backend ar ensam
+  agare av domanschema och CMS vantar pa backend-health
 - Data: Gutafinn loads a curated 977-place visitor snapshot through `/api/*`;
   utility, accommodation, fuel and charging records are excluded before seed,
   while GPS drives real distances and Open-Meteo supplies live weather
@@ -33,7 +35,8 @@ Gutafinn backend and deployment stack.
 - Keep active map behavior in `src/components/gutafinn-map.tsx`; do not move it
   back to the unmounted `public/` frontend or hide OpenStreetMap attribution.
 - Initialize Leaflet once. Keep marker clusters, GPS and selected-place updates
-  in separate effects; filtering and navigation must preserve the map instance.
+  in separate effects; filtering must diff markers and preserve both the map
+  instance and unchanged markers.
 - Keep `activeNav` separate from `feedMode` so map focus preserves filters and feed state.
 - Keep the seven visitor filters and the per-place information dialog aligned
   with API address, contacts, opening hours, accessibility and sources.
@@ -45,12 +48,16 @@ Gutafinn backend and deployment stack.
 - Surprise ranking is limited to distance, product-category diversity,
   verification date and recent local history; keep the 10 km cap and factual copy.
 - Walking, bicycle and car actions must keep their matching OpenStreetMap routing engines.
-- `public/` is the preserved legacy Leaflet frontend and is no longer mounted by Compose.
+- `public/` is the preserved legacy Leaflet frontend, excluded from Vite output
+  and no longer mounted by Compose.
+- Preserve the public/admin security-header split. Public CSP must keep GPS,
+  Open-Meteo, Google Fonts and HTTPS map tiles functional.
 - Preserve API, SQLite migrations, OSM source tracking and manually enriched data.
 - Never commit runtime data from `deploy/proxmox/data/` or `backups/`.
 - Run root `npm test` plus `npm run build`; map lifecycle behavior belongs in
   `src/components/gutafinn-map.test.tsx`. Run `npm test` in `backend/` for
-  backend, schema, seed or import changes. Browser-check 320, 390, 768, 820,
+  backend, schema, seed or import changes and in `cms/` for admin/auth changes.
+  Browser-check 320, 390, 768, 820,
   1024 landscape, 1280 and 1440px before release.
 
 ## Read first

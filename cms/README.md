@@ -1,6 +1,7 @@
-# Gotlandsguiden CMS
+# Gutafinn CMS
 
-Ett litet administrationsverktyg för platsregistret i Gotlandsguiden. CMS:et använder den befintliga SQLite-databasen i `data/places.db` och kräver inga externa npm-paket.
+Administrationsverktyget för Gutafinns platsregister. CMS:et använder samma
+SQLite-databas som backend och skyddas med passkeys eller ett reservkonto.
 
 ## Funktioner
 
@@ -12,6 +13,8 @@ Ett litet administrationsverktyg för platsregistret i Gotlandsguiden. CMS:et an
 - JSON-API för aktiva platser och kategorier
 - Signerade sessioner, CSRF-skydd, inloggningsbegränsning och servervalidering
 - Responsivt och tangentbordsanvändbart gränssnitt på svenska
+- Endast de åtta publika besökskategorierna visas; importerad kategoriproveniens,
+  kontaktetiketter och bildkällor bevaras vid redigering
 
 ## Starta lokalt
 
@@ -33,7 +36,7 @@ set +a
 npm start
 ```
 
-Applikationen läser miljövariabler från processen; `.env` laddas inte automatiskt. I produktion krävs `ADMIN_PASSWORD` och en `SESSION_SECRET` med minst 32 tecken.
+Applikationen läser miljövariabler från processen; `.env` laddas inte automatiskt. I produktion krävs `ADMIN_PASSWORD` och en `SESSION_SECRET` med minst 32 tecken. Backend är ensam ägare av domänschemat; CMS:et vägrar starta mot en databas som backend ännu inte har initierat.
 
 Passkeys är avstängda i produktion tills `PASSKEY_RP_ID` och `PASSKEY_ORIGIN` anges. `PASSKEY_RP_ID` är domännamnet utan protokoll, exempelvis `cms.example.com`. `PASSKEY_ORIGIN` är den exakta externa HTTPS-adressen, exempelvis `https://cms.example.com`.
 
@@ -63,4 +66,8 @@ Sätt `CHROME_PATH` om Chrome inte finns i `/usr/bin/google-chrome-stable`.
 
 ## Produktion
 
-Bygg containerbilden med `docker build -t gotlandsguiden-cms .`. Montera `/app/data` som en beständig volym och sätt `ADMIN_PASSWORD`, `SESSION_SECRET` och vid behov `SIGNUP_CODE` som hemligheter. Passkeys kräver HTTPS utanför localhost. Lägg tjänsten bakom HTTPS och en reverse proxy. SQLite-filen och dess eventuella `-wal`/`-shm`-filer ska säkerhetskopieras tillsammans, helst via SQLite backup-API eller efter att tjänsten stoppats.
+Bygg containerbilden med `docker build -t gutafinn-cms .`. I den sammanslagna
+driften initierar backend domänschemat innan CMS startar. Sätt `ADMIN_PASSWORD`,
+`SESSION_SECRET` och vid behov `SIGNUP_CODE` som hemligheter. Passkeys kräver
+HTTPS utanför localhost. Produktionens `backup.sh` använder SQLite backup-API
+och verifierar snapshoten före arkivering.

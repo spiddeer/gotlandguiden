@@ -21,7 +21,7 @@ function icon(name) {
 
 function layout({ title, body, user = null, active = '', description = '' }) {
   const nav = user ? `<aside class="sidebar" id="sidebar">
-    <a class="brand" href="/admin" aria-label="Gotlandsguiden admin">${icon('map')}<span><strong>Gotlandsguiden</strong><small>Administration</small></span></a>
+    <a class="brand" href="/admin" aria-label="Gutafinn admin">${icon('map')}<span><strong>Gutafinn</strong><small>Administration</small></span></a>
     <nav aria-label="Huvudmeny">
       <a class="nav-link ${active === 'dashboard' ? 'active' : ''}" href="/admin">${icon('grid')}Översikt</a>
       <a class="nav-link ${active === 'places' ? 'active' : ''}" href="/admin/places">${icon('pin')}Platser</a>
@@ -32,7 +32,7 @@ function layout({ title, body, user = null, active = '', description = '' }) {
     </div>
   </aside>` : '';
   return `<!doctype html><html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>${escapeHtml(title)} · Gotlandsguiden</title><meta name="description" content="${escapeHtml(description || title)}">
+    <title>${escapeHtml(title)} · Gutafinn</title><meta name="description" content="${escapeHtml(description || title)}">
     <link rel="stylesheet" href="/assets/admin.css"><script src="/assets/admin.js" defer></script></head>
     <body class="${user ? 'admin-shell' : 'login-page'}">${nav}${user ? '<button class="menu-button" data-menu aria-label="Öppna meny">☰</button>' : ''}
     <main class="${user ? 'main' : 'login-main'}" id="main-content">${body}</main></body></html>`;
@@ -48,7 +48,7 @@ export function loginView({ error = '', username = '', passkeyEnabled = false, s
     ${signupEnabled ? '<p class="signup-link">Ny användare? <a href="/signup">Skapa konto med passkey</a></p>' : ''}
     <div class="auth-divider"><span>eller använd reservinloggning</span></div>` : '<p class="muted">Logga in med systemadministratörens reservkonto.</p>';
   return layout({ title: 'Logga in', body: `<section class="login-card">
-    <div class="login-brand">${icon('map')}</div><p class="eyebrow">Gotlandsguiden</p><h1>Välkommen tillbaka</h1>
+    <div class="login-brand">${icon('map')}</div><p class="eyebrow">Gutafinn</p><h1>Välkommen tillbaka</h1>
     ${error ? `<div class="alert error" role="alert">${escapeHtml(error)}</div>` : ''}
     ${passkeyLogin}
     <form method="post" action="/admin/login" class="stack login-form">
@@ -70,7 +70,7 @@ export function signupView({ enabled = false } = {}) {
     </form>` : `<div class="alert error" role="alert">Registrering med passkey är inte aktiverad. Kontakta systemansvarig för att få ett konto.</div>`;
   return layout({ title: 'Skapa konto', body: `<section class="login-card signup-card">
     <a class="back-link" href="/admin/login">${icon('arrow')}Till inloggningen</a>
-    <div class="login-brand">${icon('key')}</div><p class="eyebrow">Gotlandsguiden</p><h1>Skapa konto</h1>
+    <div class="login-brand">${icon('key')}</div><p class="eyebrow">Gutafinn</p><h1>Skapa konto</h1>
     ${content}
   </section>` });
 }
@@ -87,7 +87,7 @@ export function dashboardView({ stats, recent, user }) {
     ['Kategorier', stats.categories || 0, 'map', 'Används just nu'],
   ].map(([label, value, iconName, hint]) => `<article class="stat-card"><span class="stat-icon">${icon(iconName)}</span><div><span>${escapeHtml(label)}</span><strong>${value}</strong><small>${escapeHtml(hint)}</small></div></article>`).join('');
   return layout({ title: 'Översikt', user, active: 'dashboard', body:
-    `${header('Översikt', 'En snabb bild av innehållet i Gotlandsguiden.', `<a class="button primary" href="/admin/places/new">${icon('plus')}Lägg till plats</a>`)}
+    `${header('Översikt', 'En snabb bild av innehållet i Gutafinn.', `<a class="button primary" href="/admin/places/new">${icon('plus')}Lägg till plats</a>`)}
     <section class="stats-grid" aria-label="Statistik">${statCards}</section>
     <section class="panel"><div class="panel-heading"><div><h2>Senast i registret</h2><p>Platser i alfabetisk ordning</p></div><a href="/admin/places">Visa alla</a></div>
       ${placeTable(recent.rows, '')}</section>` });
@@ -148,7 +148,7 @@ export function placeFormView({ place = {}, categories, errors = {}, csrf, user,
   const title = isNew ? 'Lägg till plats' : `Redigera ${place.name || 'plats'}`;
   return layout({ title, user, active: 'places', body:
     `<a class="back-link" href="/admin/places">${icon('arrow')}Tillbaka till platser</a>
-    ${header(title, isNew ? 'Skapa en ny plats i Gotlandsguiden.' : `ID: ${place.id}`, '')}
+    ${header(title, isNew ? 'Skapa en ny plats i Gutafinn.' : `ID: ${place.id}`, '')}
     ${Object.keys(errors).length ? `<div class="alert error" role="alert"><strong>Platsen kunde inte sparas.</strong> Kontrollera de markerade fälten.</div>` : ''}
     <form class="place-form" method="post" action="${isNew ? '/admin/places' : `/admin/places/${encodeURIComponent(place.id)}`}">
       <input type="hidden" name="csrf" value="${escapeHtml(csrf)}">

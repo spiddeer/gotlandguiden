@@ -45,8 +45,9 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
 3. Gutafinn laddar alla aktiva platser fran `/api/places`, filtrerar och sorterar lokalt.
 4. Mobil/iPad visar en enkelkolumn och oppnar kartan via `Karta`; fran 1024px
    landskap eller 1280px visas feed och karta samtidigt.
-5. Leaflet-instansen skapas en gang. Kluster, GPS och vald plats uppdateras via
-   separata effekter och kartan behaller permanent synlig OSM-attribution.
+5. Leaflet-instansen skapas en gang. Filter diffar markerregistret i stallet for
+   att bygga om klustret; GPS och vald plats uppdateras via separata effekter.
+   Kartan behaller permanent synlig OSM-attribution.
 6. Browsern ber om geolokalisering for verkligt avstand/GPS-markor och hamtar vader fran Open-Meteo.
 7. `Overraska mig` gor ett lokalt urval fran samma platslista och oppnar
    fardsattsanpassad navigation hos OpenStreetMap.
@@ -72,7 +73,8 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
 - `src/styles.css`: Tailwind v4, Leaflet/markercluster-CSS, `@theme inline` och semantiska OKLCH-tokens.
 - `src/components/ui/`: shadcn/ui-komponenter i `new-york`-stil.
 - `src/assets/`: fem genererade och optimerade Gotlandsbilder.
-- `public/`: bevarad legacy-Leaflet-frontend; monteras inte langre av Compose.
+- `public/`: bevarad legacy-Leaflet-frontend; exkluderas ur Vite-build och
+  monteras inte langre av Compose.
 
 ### Backendfiler
 
@@ -85,6 +87,13 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
 - `backend/seed.js`: Idempotent OSM-import vid containerstart.
 - `backend/seed-data.json`: Seed-dataset.
 - `backend/test/`: Tester for API, migreringar/databas och OSM-import.
+
+### CMS-filer
+
+- `cms/src/`: Passkey-/reservkontoskyddad platsadministration mot samma SQLite.
+- `cms/test/`: Auth-, WebAuthn-, validerings- och CRUD-regressionstester.
+- Backend ager domanschemat och migreringarna. CMS far aldrig initiera eller
+  andra domanschemat och ska vagra start mot en oinitierad databas.
 
 ## Frontend-state och designkontrakt
 
@@ -115,8 +124,9 @@ reduced-motion-stod enligt `DESIGN.md`.
 
 `activeNav` och `feedMode` ar avsiktligt separata: `Kartfokus` far inte tappa
 sokning, kategori eller sparvy. Listval och markorklick ska synka
-`selectedPlaceId` at bada hall. Bygg aldrig om Leaflet-instansen for filter,
-GPS eller val; initiering, kluster, GPS och selection ska forbli separata.
+`selectedPlaceId` at bada hall. Bygg aldrig om Leaflet-instansen eller alla
+oforandrade markorer for filter, GPS eller val; initiering, markordiff,
+GPS och selection ska forbli separata.
 Leaflet-kontroller, markorer och attribution maste vara tangentbords-/touchbara,
 och OpenStreetMap-krediteringen ska vara permanent lasbar pa alla viewportstorlekar.
 
@@ -170,7 +180,13 @@ Andra inte den ena snapshoten utan att synka och testa den andra.
 ### Compose services
 
 - `backend` (Node/Express, intern 8080)
+- `cms` (Node, intern 3000; startar efter gron backend-health)
 - `web` (multi-stage Vite-build + Nginx, publiceras pa port 3003 i CT 201)
+
+Nginx anvander separata CSP-/browserpolicyer for publik app och CMS. Andra inte
+publik `connect-src`, `font-src` eller `Permissions-Policy` sa att Open-Meteo,
+Google Fonts eller GPS slutar fungera. Hashade assets ar immutable-cachelagrade,
+medan `index.html` atervalideras och API-cachen satts av backend.
 
 ## Standardoperativa kommandon
 
@@ -202,6 +218,8 @@ npm run build
 npm test
 cd backend
 npm test
+cd ../cms
+npm test
 ```
 
 Efter deploy:
@@ -232,6 +250,8 @@ aterstallbart kartfokus, bevarade filter och synlig OpenStreetMap-attribution.
     behall och utoka `gutafinn-map.test.tsx` vid livscykelandringar.
 12. Responsiva andringar ska browserkontrolleras over hela 320-1440px-matrisen
     och far inte skapa mobil sidscroll eller dolja bottom-nav/topnavigation.
+13. Vid Nginx-/headerandringar: bygg web-imagen, kor `nginx -t` och kontrollera
+    GPS, Open-Meteo, Google Fonts, kartplattor och bada hostnamnens CSP.
 
 ## Snabb felsokning
 

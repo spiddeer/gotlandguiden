@@ -79,7 +79,7 @@ const fakeWebAuthn = {
 };
 
 before(async () => {
-  temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'gotlandsguiden-cms-'));
+  temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'gutafinn-cms-'));
   initializeDomainDatabase(path.join(temporaryDirectory, 'places.db'));
   app = createApp({
     NODE_ENV: 'test', ADMIN_USERNAME: 'editor', ADMIN_PASSWORD: 'a-secure-test-password',
@@ -414,7 +414,7 @@ test('mutations require a valid CSRF token', async () => {
 });
 
 test('public place queries are not limited by the admin page size', () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gotlandsguiden-public-api-'));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gutafinn-public-api-'));
   const databasePath = path.join(directory, 'places.db');
   initializeDomainDatabase(databasePath);
   const store = openDatabase(databasePath);
@@ -443,7 +443,7 @@ test('public place queries are not limited by the admin page size', () => {
 });
 
 test('editing imported items preserves category provenance and one primary category', () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gotlandsguiden-category-edit-'));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gutafinn-category-edit-'));
   const databasePath = path.join(directory, 'places.db');
   initializeDomainDatabase(databasePath);
   const store = openDatabase(databasePath);

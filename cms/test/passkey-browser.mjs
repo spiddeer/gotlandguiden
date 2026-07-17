@@ -64,7 +64,7 @@ async function connectCdp(url) {
 }
 
 async function run() {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gotlandsguiden-passkey-browser-'));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gutafinn-passkey-browser-'));
   const chromeDirectory = path.join(directory, 'chrome');
   const appPort = await freePort();
   const debugPort = await freePort();

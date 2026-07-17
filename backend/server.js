@@ -1,4 +1,5 @@
 const express = require("express");
+const crypto = require("crypto");
 const { db } = require("./db");
 const {
   getPlace,
@@ -9,6 +10,7 @@ const {
 
 const PORT = process.env.PORT || 8080;
 const API_KEY = process.env.API_KEY || "";
+const PUBLIC_CACHE_CONTROL = "public, max-age=300, stale-while-revalidate=3600";
 
 function slugify(text) {
   return text
@@ -28,6 +30,13 @@ function createUniqueId(database, name) {
   let suffix = 1;
   while (exists.get(candidate)) candidate = `${base}-${++suffix}`;
   return candidate;
+}
+
+function safeEqual(left, right) {
+  const leftBuffer = Buffer.from(String(left));
+  const rightBuffer = Buffer.from(String(right));
+  return leftBuffer.length === rightBuffer.length
+    && crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 function validatePlaceInput(database, input, { partial = false } = {}) {
@@ -84,7 +93,7 @@ function createApp(database = db, { apiKey = API_KEY } = {}) {
     if (!apiKey) {
       return res.status(503).json({ error: "API writes are not configured." });
     }
-    if (req.get("X-API-Key") !== apiKey) {
+    if (!safeEqual(req.get("X-API-Key") || "", apiKey)) {
       return res.status(401).json({ error: "Invalid or missing API key." });
     }
     next();
@@ -92,20 +101,24 @@ function createApp(database = db, { apiKey = API_KEY } = {}) {
 
   app.get("/healthz", (req, res) => {
     database.prepare("SELECT 1").get();
+    res.set("Cache-Control", "no-store");
     res.json({ ok: true });
   });
 
   app.get("/api/categories", (req, res) => {
+    res.set("Cache-Control", PUBLIC_CACHE_CONTROL);
     res.json(listCategories(database));
   });
 
   app.get("/api/places", (req, res) => {
+    res.set("Cache-Control", PUBLIC_CACHE_CONTROL);
     res.json(listPlaces(database));
   });
 
   app.get("/api/places/:id", (req, res) => {
     const place = getPlace(database, req.params.id);
     if (!place) return res.status(404).json({ error: "Place not found." });
+    res.set("Cache-Control", PUBLIC_CACHE_CONTROL);
     res.json(place);
   });
 
