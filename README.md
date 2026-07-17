@@ -60,6 +60,7 @@ Produkten kombinerar:
 - Delbara lankar som aterstaller sokning, kategori, kartfokus och vald plats
 - Praktiska filter for GPS-avstand och om oppettider, kontakt eller
   tillganglighetsinformation finns i kallan
+- Installerbar PWA med offline-appskal och senast lyckat hamtade platsdata
 - Fem genererade, optimerade WebP-bilder i `src/assets/`
 - shadcn/ui-komponenter, Lucide-ikoner och semantiska OKLCH-tokens
 - Tillgangliga fokus-, save- och navigationsstates samt safe-area-stod
@@ -203,6 +204,16 @@ plats ar oppen eller fullt tillganglig. Snapshoten saknar strukturerade
 veckotider och har glest tillganglighetsunderlag, sa Gutafinn visar medvetet
 inte missvisande `Oppet nu`, `Gratis` eller `Rullstolsanpassat`-filter. Alla val
 kan rensas samlat och foljer med i en delbar URL utan GPS-koordinater.
+
+## Offline och installation
+
+Produktionsbygget genererar manifest, 192/512px appikoner och en versionssatt
+service worker. Appskalets lokala JS, CSS och bilder forcachelagras, och
+`/api/places` samt `/api/categories` varms vid installation och uppdateras med
+network-first. Vid natfel anvands senaste lyckade API-svar. En synlig
+offline-status forklarar att kartplattor och livevader ar externa och darfor kan
+saknas utan nat. Gutafinn service-worker-cachar inte GPS, externa kartplattor,
+Open-Meteo eller andra origin-resurser.
 
 ## API
 

@@ -45,6 +45,9 @@ Gutafinn backend and deployment stack.
 - Practical filters in `src/lib/practical-filters.ts` may filter distance or
   fact availability only. Do not infer open-now, free or wheelchair-accessible
   from sparse/unstructured source data.
+- PWA build assets come from `src/pwa/` plus generated icons. Keep the service
+  worker same-origin and limited to the app shell and public API data; never
+  cache GPS, OSM tiles or Open-Meteo responses.
 - Keep the seven visitor filters and the per-place information dialog aligned
   with API address, contacts, opening hours, accessibility and sources.
 - Preserve the 320px mobile, 768/820px portrait-tablet and 1024-1440px split

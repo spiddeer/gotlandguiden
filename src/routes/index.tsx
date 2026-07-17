@@ -7,6 +7,7 @@ import {
   Bookmark,
   CheckCircle2,
   Clock3,
+  CloudOff,
   ExternalLink,
   Footprints,
   Globe2,
@@ -138,6 +139,25 @@ function useMediaQuery(query: string) {
   return matches
 }
 
+function useOnlineStatus() {
+  const [online, setOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine,
+  )
+
+  useEffect(() => {
+    const markOnline = () => setOnline(true)
+    const markOffline = () => setOnline(false)
+    window.addEventListener("online", markOnline)
+    window.addEventListener("offline", markOffline)
+    return () => {
+      window.removeEventListener("online", markOnline)
+      window.removeEventListener("offline", markOffline)
+    }
+  }, [])
+
+  return online
+}
+
 function getPlaceImage(place: ApiPlace) {
   const apiImage = place.images?.[0]?.url
   if (apiImage) {
@@ -183,6 +203,7 @@ function GutafinnPage() {
   const requestedLocation = useRef(false)
   const placeRequestId = useRef(0)
   const splitLayout = useMediaQuery(SPLIT_LAYOUT_QUERY)
+  const online = useOnlineStatus()
 
   const loadPlaces = useCallback(async () => {
     const requestId = ++placeRequestId.current
@@ -384,6 +405,15 @@ function GutafinnPage() {
       <a className="gutafinn-skip-link" href="#discovery-content">
         Hoppa till innehållet
       </a>
+      {!online && (
+        <div
+          className="fixed left-1/2 top-[calc(0.75rem+env(safe-area-inset-top))] z-[1200] flex min-h-11 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-4 text-xs font-bold text-sea-deep shadow-[var(--shadow-float)] backdrop-blur-md"
+          role="status"
+        >
+          <CloudOff className="size-4 shrink-0" aria-hidden="true" />
+          Offline – visar senast hämtade platser. Karta och väder kan saknas.
+        </div>
+      )}
       <DesktopHeader active={activeNav} locationState={locationState} onSelect={selectNavigation} />
 
       <div className={cn("gutafinn-responsive-shell", activeNav === "Karta" && "is-map-focus")}>

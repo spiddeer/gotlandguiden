@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client"
 import { createRouter, RouterProvider } from "@tanstack/react-router"
 
 import { routeTree } from "./routeTree.gen"
+import { registerServiceWorker } from "./lib/pwa"
 import "./styles.css"
 
 const router = createRouter({
@@ -22,3 +23,5 @@ createRoot(document.getElementById("root")!).render(
     <RouterProvider router={router} />
   </StrictMode>,
 )
+
+void registerServiceWorker()

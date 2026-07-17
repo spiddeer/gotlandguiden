@@ -130,6 +130,9 @@ Skyddar mot:
 16. Vid praktiska filter: utoka `practical-filters.test.ts` och URL-testerna.
     Testa kombinationer, saknad GPS, tomma resultat och att copy inte overdriver
     vad kallans oppettids-/tillganglighetsdata faktiskt sager.
+17. Vid PWA-andringar: root-builden ska emittera `sw.js`, manifest och bada
+    ikoner. Kontrollera service-worker-syntax, Nginx MIME/cache och att offline-
+    fallback endast omfattar appskal samt publika API-svar.
 
 `Overraska mig` ska fortsatt ha ren, testbar domanlogik i `src/lib/surprise.ts`,
 begransad localStorage-hantering i `src/lib/surprise-storage.ts` och UI i

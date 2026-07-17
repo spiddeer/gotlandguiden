@@ -154,6 +154,8 @@ warm restrained light and no embedded text or logos. Preserve meaningful
   Its active state is visible in the feed and offers a 44px reset to all Gotland.
 - Practical filters live in a collapsible, keyboard-operable panel. Distance is
   disabled until GPS exists; fact filters state only that source data exists.
+- Offline state is a concise, high-priority status pill. It states that cached
+  place data remains available and that map tiles/weather may be missing.
 - The Leaflet map instance is initialized once. Marker clusters, GPS state and
   selected-place state update independently so filtering and nav changes do not
   rebuild or race the map.
@@ -196,6 +198,9 @@ interface labels.
   filter updates list and markers together, including a zero-result viewport.
 - Practical filters combine correctly, expose active/result counts, have one
   clear-all action and never relabel raw hours as currently open.
+- Installed standalone mode preserves safe areas and all responsive breakpoints;
+  offline reload restores the shell and cached catalogue without claiming live
+  map tiles, weather or opening facts.
 - Browser smoke covers 320, 390, 768, 820, 1024 landscape, 1280 and 1440px,
   including denied GPS and horizontal-overflow checks.
 - `src/components/gutafinn-map.test.tsx` covers one-time map initialization,

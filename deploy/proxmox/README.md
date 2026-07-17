@@ -26,6 +26,7 @@ Denna runbook beskriver den faktiska produktionssetupen och hur den driftas.
    `public/`, som kopieras till en ren Nginx-image via `deploy/Dockerfile`.
 6. Nginx skickar separata CSP-/browserpolicyer for publik app och CMS, gzippar
    textresurser och ger hashade assets immutable cache.
+   `/sw.js` ar alltid `no-store`; manifestet har korrekt MIME-typ och kort cache.
 7. Gutafinn laddar OpenStreetMap-plattor direkt i browsern och klustrar
    `/api/places` med Leaflet.markercluster. Mobil/iPad oppnar kartan via `Karta`;
    desktop visar en permanent feed/karta-split med aterstallbart kartfokus.
@@ -195,6 +196,8 @@ docker-compose -f /opt/gutafinn/deploy/proxmox/docker-compose.yml ps
 ```bash
 curl -fsSI https://gutafinn.tobtech.se
 curl -fsSI https://gutafinn.tobtech.se/index.html
+curl -fsSI https://gutafinn.tobtech.se/sw.js
+curl -fsSI https://gutafinn.tobtech.se/manifest.webmanifest
 curl -fsS https://gutafinn.tobtech.se/api/categories
 curl -fsS https://gutafinn.tobtech.se/api/places | head
 curl -fsSI https://gutafinn-admin.tobtech.se/admin/login
@@ -223,6 +226,9 @@ Oppna `https://gutafinn.tobtech.se` i mobil och desktop och verifiera:
     och aterstall sedan `Hela Gotland`, aven for ett tomt kartomrade.
 13. Kombinera 1/5/10 km med oppettids-, kontakt- och tillganglighetsinfo,
     kontrollera tomt state, rensa allt och ladda om den delbara filter-URL:en.
+14. Ladda appen online, verifiera installerbart manifest/service worker, ladda
+    om offline och kontrollera appskal + senaste platsdata. Karta/vader far visa
+    dokumenterad begransning men appen far inte bli tom.
 
 ### Verifiera release och databas i CT 201
 
@@ -243,6 +249,8 @@ docker-compose -f deploy/proxmox/docker-compose.yml exec backend node -e \
 4. Domanen svarar inte: kontrollera cloudflared-process i CT 200 och ingress-regel.
 5. GPS, vader eller typsnitt blockeras: kontrollera public CSP och
    `Permissions-Policy` i `deploy/nginx-public-headers.conf`.
+6. Offline-installation uppdateras inte: kontrollera `no-store` pa `/sw.js`,
+   service-worker-scope `/` och att manifest/ikoner finns i webbcontainern.
 
 ## Viktiga regler
 

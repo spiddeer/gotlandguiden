@@ -25,6 +25,12 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - name: Verify offline build artifacts
+        run: |
+          test -s dist/sw.js
+          test -s dist/manifest.webmanifest
+          test -s dist/pwa/icon-192.png
+          test -s dist/pwa/icon-512.png
 
   backend:
     runs-on: ubuntu-latest

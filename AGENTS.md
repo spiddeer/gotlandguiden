@@ -78,6 +78,9 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
 - `src/lib/map-area.ts`: validerad viewportfiltrering inklusive datumlinje-fall.
 - `src/lib/practical-filters.ts`: kombinerbara filter for GPS-radie och
   forekomst av oppettider, kontakt samt tillganglighetsuppgift.
+- `src/lib/pwa.ts`: defensiv produktionsregistrering av `/sw.js`.
+- `src/pwa/`: manifest och service-worker-mall; Vite injicerar hashad precache
+  och emitterar stabila PWA-filer via `vite.config.ts`.
 - `src/lib/places.test.ts`: frontendtester for datamappning och sanningsenliga states.
 - `src/styles.css`: Tailwind v4, Leaflet/markercluster-CSS, `@theme inline` och semantiska OKLCH-tokens.
 - `src/components/ui/`: shadcn/ui-komponenter i `new-york`-stil.
@@ -157,6 +160,12 @@ inte `Oppet nu`, och `Tillganglighetsinfo` betyder inte automatiskt full
 tillganglighet. Avstandsfilter ar 1/5/10 km och ska inte exkludera data innan en
 GPS-position finns. Alla praktiska filter kombineras med sokning, kategori,
 sparvy och eventuellt kartomrade.
+
+Offlinekontraktet omfattar appskal och senaste lyckade publika API-data. Service
+workern far inte cacha GPS, externa OSM-plattor, Open-Meteo eller godtyckliga
+bildorigin. Navigation ar network-first med `index.html` som fallback; publika
+API-anrop ar network-first med separat datacache. `/sw.js` maste ha `no-store`
+vid Nginx och registreras med `updateViaCache: none`.
 Leaflet-kontroller, markorer och attribution maste vara tangentbords-/touchbara,
 och OpenStreetMap-krediteringen ska vara permanent lasbar pa alla viewportstorlekar.
 
@@ -286,6 +295,8 @@ aterstallbart kartfokus, bevarade filter och synlig OpenStreetMap-attribution.
     Leaflet-instansens agarskap eller koppla filtrering till `moveend` automatiskt.
 15. Lagga aldrig till `Oppet nu`, pris- eller tillganglighetsloften utan
     tillrackligt strukturerat underlag och sanningsenliga tomma states.
+16. Vid PWA-andringar: verifiera genererade manifest/ikoner/sw, `node --check`,
+    Nginx content types/cache headers samt online -> reload -> offline-flodet.
 
 ## Snabb felsokning
 
