@@ -102,6 +102,9 @@ available.
 - A sticky 72px top bar replaces bottom navigation.
 - The independently scrolling feed is 460-540px wide; the map consumes the
   remaining viewport and stays mounted while feed state changes.
+- Layouts inside that fixed feed respond to the component container rather than
+  the browser viewport. Long Swedish labels wrap cleanly; grids reduce their
+  column count before text clips, overlaps controls or causes horizontal scroll.
 - The featured place becomes a horizontal editorial card; at 1280px compact
   places form a two-column grid inside the feed.
 - `Kartfokus` collapses the feed without discarding search, category, saved view

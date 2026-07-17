@@ -148,6 +148,11 @@ vara 460-540px, kartan flexibel och toppnavigationen ersatta bottom-nav. Bevara
 svenska texter, 44px touch targets, fokusmarkeringar, safe areas och
 reduced-motion-stod enligt `DESIGN.md`.
 
+Komponenter inne i desktop-feeden ska reagera pa sin faktiska containerbredd,
+inte enbart viewport-breakpoints som `sm:`. Anvand container queries eller
+innehallsstyrda `auto-fit`-gridar for interna kolumner, och lat lang svensk copy
+radbrytas utan att overlappa kontroller eller skapa horisontell overflow.
+
 `activeNav` och `feedMode` ar avsiktligt separata: `Kartfokus` far inte tappa
 sokning, kategori eller sparvy. Listval och markorklick ska synka
 `selectedPlaceId` at bada hall. Bygg aldrig om Leaflet-instansen eller alla

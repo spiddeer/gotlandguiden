@@ -916,7 +916,7 @@ function FeaturedPlace({
             Stämningsbild från Gotland
           </span>
         )}
-        <Badge className="absolute left-4 top-4 max-w-[calc(100%-5.5rem)] truncate bg-card/92 text-sea-deep backdrop-blur-md">
+        <Badge className="absolute left-4 top-4 h-auto min-h-7 max-w-[calc(100%-6rem)] whitespace-normal break-words bg-card/92 py-1 text-left leading-tight text-sea-deep backdrop-blur-md">
           {place.tag}
         </Badge>
         <Button
@@ -933,7 +933,7 @@ function FeaturedPlace({
       </div>
 
       <div className="gutafinn-featured-body p-5">
-        <div className="flex flex-col items-start gap-3 min-[380px]:flex-row min-[380px]:justify-between">
+        <div className="gutafinn-featured-header flex items-start gap-3">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sea">{place.kind}</p>
             <h3 className="mt-1 font-display text-[1.7rem] leading-tight font-semibold text-sea-deep">{place.name}</h3>
@@ -951,7 +951,7 @@ function FeaturedPlace({
         <p className="mt-3 text-sm leading-6 text-muted-foreground">{place.description}</p>
         <PlaceMeta place={place} />
 
-        <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="gutafinn-featured-actions mt-5 grid gap-2">
           <Button variant="secondary" onClick={onShowDetails}>
             <Info className="size-4" aria-hidden="true" />
             Mer information
