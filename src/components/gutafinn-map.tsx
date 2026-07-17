@@ -1,9 +1,10 @@
 import L from "leaflet"
 import "leaflet.markercluster"
-import { LocateFixed, MapPin } from "lucide-react"
+import { LocateFixed, MapPin, Search } from "lucide-react"
 import { useEffect, useRef } from "react"
 
 import { Button } from "@/components/ui/button"
+import type { MapBounds } from "@/lib/map-area"
 import type { ApiPlace, Coordinates } from "@/lib/places"
 import { cn } from "@/lib/utils"
 
@@ -62,6 +63,8 @@ export function GutafinnMap({
   selectedPlaceId = null,
   onRequestLocation,
   onPlaceSelect,
+  onSearchArea,
+  mapAreaActive = false,
   className,
 }: {
   places: ApiPlace[]
@@ -70,6 +73,8 @@ export function GutafinnMap({
   selectedPlaceId?: string | null
   onRequestLocation: () => void
   onPlaceSelect?: (placeId: string) => void
+  onSearchArea?: (bounds: MapBounds) => void
+  mapAreaActive?: boolean
   className?: string
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -227,22 +232,44 @@ export function GutafinnMap({
         aria-label="Interaktiv OpenStreetMap-karta med platser på Gotland"
       />
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-[800] flex items-start justify-end gap-2 px-4 pt-[calc(1rem+env(safe-area-inset-top))]">
-        <div className="pointer-events-auto flex min-h-11 items-center gap-2 rounded-full border border-border bg-card/95 px-4 text-xs font-semibold text-sea-deep shadow-[var(--shadow-float)] backdrop-blur-md">
-          <MapPin className="size-4 text-sea" aria-hidden="true" />
-          {places.length > 0 ? `${places.length.toLocaleString("sv-SE")} platser` : "Laddar platser…"}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[800] flex flex-col items-end gap-2 px-4 pt-[calc(1rem+env(safe-area-inset-top))]">
+        <div className="flex items-center gap-2">
+          <div className="pointer-events-auto flex min-h-11 items-center gap-2 rounded-full border border-border bg-card/95 px-4 text-xs font-semibold text-sea-deep shadow-[var(--shadow-float)] backdrop-blur-md">
+            <MapPin className="size-4 text-sea" aria-hidden="true" />
+            {places.length > 0 ? `${places.length.toLocaleString("sv-SE")} platser` : "Inga platser här"}
+          </div>
+          <Button
+            type="button"
+            size="icon"
+            variant="secondary"
+            className="pointer-events-auto rounded-full border border-border bg-card/95 shadow-[var(--shadow-float)] backdrop-blur-md"
+            aria-label={locationState === "loading" ? "Söker din position" : "Visa min position"}
+            onClick={onRequestLocation}
+            disabled={locationState === "loading"}
+          >
+            <LocateFixed className="size-5" aria-hidden="true" />
+          </Button>
         </div>
-        <Button
-          type="button"
-          size="icon"
-          variant="secondary"
-          className="pointer-events-auto rounded-full border border-border bg-card/95 shadow-[var(--shadow-float)] backdrop-blur-md"
-          aria-label={locationState === "loading" ? "Söker din position" : "Visa min position"}
-          onClick={onRequestLocation}
-          disabled={locationState === "loading"}
-        >
-          <LocateFixed className="size-5" aria-hidden="true" />
-        </Button>
+        {onSearchArea && (
+          <Button
+            type="button"
+            variant="secondary"
+            className="pointer-events-auto rounded-full border border-border bg-card/95 shadow-[var(--shadow-float)] backdrop-blur-md"
+            onClick={() => {
+              const bounds = mapRef.current?.getBounds()
+              if (!bounds) return
+              onSearchArea({
+                north: bounds.getNorth(),
+                south: bounds.getSouth(),
+                east: bounds.getEast(),
+                west: bounds.getWest(),
+              })
+            }}
+          >
+            <Search className="size-4" aria-hidden="true" />
+            {mapAreaActive ? "Uppdatera kartområdet" : "Sök i kartområdet"}
+          </Button>
+        )}
       </div>
     </section>
   )

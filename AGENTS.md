@@ -75,6 +75,7 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
   kategori, kartvy och vald plats.
 - `src/lib/day-planner.ts`: deterministisk narsta-stopp-ordning, max atta stopp
   och beraknad stracka/restid.
+- `src/lib/map-area.ts`: validerad viewportfiltrering inklusive datumlinje-fall.
 - `src/lib/places.test.ts`: frontendtester for datamappning och sanningsenliga states.
 - `src/styles.css`: Tailwind v4, Leaflet/markercluster-CSS, `@theme inline` och semantiska OKLCH-tokens.
 - `src/components/ui/`: shadcn/ui-komponenter i `new-york`-stil.
@@ -143,6 +144,11 @@ Dagsplaneraren ska alltid utga fran den beständiga sparordningen, men aldrig
 lagra en plan eller GPS. Med GPS valjs narmaste forsta stopp; utan GPS blir den
 forst sparade platsen start. Visa hogst atta stopp, kalla avstand/restid for
 uppskattningar och behall gang/cykel/bil kopplade till ratt OSM-motor.
+
+Kartomradesfiltret ar ett explicit, tillfalligt filter ovanpa sokning, kategori
+och sparvy. `GutafinnMap` rapporterar endast aktuella Leaflet-granser nar
+anvandaren trycker pa knappen. Feeden ska alltid visa aktiv status och kunna
+aterstalla hela Gotland; GPS och URL-state far inte blandas ihop med viewporten.
 Leaflet-kontroller, markorer och attribution maste vara tangentbords-/touchbara,
 och OpenStreetMap-krediteringen ska vara permanent lasbar pa alla viewportstorlekar.
 
@@ -268,6 +274,8 @@ aterstallbart kartfokus, bevarade filter och synlig OpenStreetMap-attribution.
     och far inte skapa mobil sidscroll eller dolja bottom-nav/topnavigation.
 13. Vid Nginx-/headerandringar: bygg web-imagen, kor `nginx -t` och kontrollera
     GPS, Open-Meteo, Google Fonts, kartplattor och bada hostnamnens CSP.
+14. Vid kartomradesandringar: testa bounds-filtret och callbacken utan att flytta
+    Leaflet-instansens agarskap eller koppla filtrering till `moveend` automatiskt.
 
 ## Snabb felsokning
 

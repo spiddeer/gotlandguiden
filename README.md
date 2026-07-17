@@ -52,6 +52,8 @@ Produkten kombinerar:
   generisk handel och vanlig service ingar inte i den publika katalogen
 - Synkroniserad Leaflet-karta: listval fokuserar markor och markorklick lyfter
   motsvarande kort utan att kartinstansen eller oforandrade markorer byggs om
+- `Sok i kartomradet` begransar karta och lista till aktuell viewport och kan
+  aterstallas till hela Gotland fran feeden
 - OpenStreetMap-plattor, markercluster och permanent synlig attribution
 - Verkligt GPS-avstand, uppskattad gangtid och livevader/solnedgang
 - Beständig sparlista i localStorage
@@ -180,6 +182,14 @@ som sparades forst som start. Darefter valjs narmaste aterstaende stopp stegvis.
 Raknade avstand ar fagelvag och restider ar uppskattningar for gang, cykel eller
 bil. Varje etapp oppnas separat med ratt OpenStreetMap-motor for faktisk vag.
 Planen och GPS-positionen lagras inte.
+
+## Sok i kartomradet
+
+Efter panorering eller zoomning kan anvandaren uttryckligen anvanda kartans
+aktuella granser som ett extra filter. Samma grans appliceras pa listan och
+markorerna, ovanpa sokning, kategori och sparvy. En tydlig status i feeden
+aterstaller hela Gotland. Kartgransen ar tillfallig browser-state och lagras
+inte som GPS eller i den delbara URL:en.
 
 ## API
 

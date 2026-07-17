@@ -48,6 +48,7 @@ import { DayPlanner } from "@/components/day-planner"
 import { GutafinnMap } from "@/components/gutafinn-map"
 import { SurpriseAdventure } from "@/components/surprise-adventure"
 import { buildDiscoverySearch, parseDiscoverySearch } from "@/lib/discovery-url"
+import { filterPlacesInBounds, type MapBounds } from "@/lib/map-area"
 import {
   countWithinRadius,
   filterPlaces,
@@ -171,6 +172,7 @@ function GutafinnPage() {
   const [showDayPlanner, setShowDayPlanner] = useState(false)
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(initialUrlState.selectedPlaceId)
   const [detailsPlaceId, setDetailsPlaceId] = useState<string | null>(null)
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null)
   const requestedLocation = useRef(false)
   const placeRequestId = useRef(0)
   const splitLayout = useMediaQuery(SPLIT_LAYOUT_QUERY)
@@ -252,7 +254,7 @@ function GutafinnPage() {
     }
   }, [activeNav, category, query, selectedPlaceId])
 
-  const visiblePlaces = useMemo(
+  const filteredPlaces = useMemo(
     () =>
       filterPlaces(
         places,
@@ -262,6 +264,10 @@ function GutafinnPage() {
         feedMode === "Sparat" ? saved : undefined,
       ),
     [category, feedMode, places, position, query, saved],
+  )
+  const visiblePlaces = useMemo(
+    () => filterPlacesInBounds(filteredPlaces, mapBounds),
+    [filteredPlaces, mapBounds],
   )
 
   const nearbyCount = useMemo(
@@ -407,6 +413,7 @@ function GutafinnPage() {
               <div className="gutafinn-feed-content safe-bottom relative z-10 -mt-7 space-y-8 px-5">
                 <SearchBar query={query} onQueryChange={setQuery} onRequestLocation={requestLocation} />
                 <CategoryFilter selected={category} onSelect={setCategory} />
+                {mapBounds && <MapAreaFilterStatus onClear={() => setMapBounds(null)} />}
                 {feedMode === "Hem" && <SurpriseCallout onOpen={() => setShowSurprise(true)} />}
                 {feedMode === "Sparat" && (
                   <DayPlannerCallout savedCount={savedPlaces.length} onOpen={() => setShowDayPlanner(true)} />
@@ -479,6 +486,8 @@ function GutafinnPage() {
               selectedPlaceId={selectedPlaceId}
               onRequestLocation={requestLocation}
               onPlaceSelect={selectPlaceOnMap}
+              onSearchArea={setMapBounds}
+              mapAreaActive={mapBounds !== null}
               className="h-full min-h-0"
             />
           </div>
@@ -735,6 +744,22 @@ function CategoryFilter({ selected, onSelect }: { selected: Category; onSelect: 
         )
       })}
     </nav>
+  )
+}
+
+function MapAreaFilterStatus({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="flex min-h-11 items-center gap-3 rounded-2xl border border-sea/25 bg-secondary px-4 py-2 text-sm text-sea-deep">
+      <MapIcon className="size-4 shrink-0" aria-hidden="true" />
+      <span className="min-w-0 flex-1 font-semibold" role="status">Listan visar det valda kartområdet.</span>
+      <button
+        type="button"
+        onClick={onClear}
+        className="min-h-11 shrink-0 rounded-xl px-2 text-xs font-extrabold underline decoration-sea/40 underline-offset-4 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
+      >
+        Hela Gotland
+      </button>
+    </div>
   )
 }
 

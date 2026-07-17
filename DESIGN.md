@@ -150,6 +150,8 @@ warm restrained light and no embedded text or logos. Preserve meaningful
 - The active bottom-nav item uses `aria-current="page"`.
 - The map renders the full API dataset through marker clusters and uses the GPS
   position as a separate, non-interactive user marker.
+- `Sök i kartområdet` applies the current viewport only on explicit activation.
+  Its active state is visible in the feed and offers a 44px reset to all Gotland.
 - The Leaflet map instance is initialized once. Marker clusters, GPS state and
   selected-place state update independently so filtering and nav changes do not
   rebuild or race the map.
@@ -188,6 +190,8 @@ interface labels.
 - Filtering preserves the Leaflet instance and reuses unchanged markers; list
   and marker selection stay synchronized; `Kartfokus -> Hem` preserves active
   category and feed mode.
+- Pan/zoom does not silently change results. Activating and clearing the map-area
+  filter updates list and markers together, including a zero-result viewport.
 - Browser smoke covers 320, 390, 768, 820, 1024 landscape, 1280 and 1440px,
   including denied GPS and horizontal-overflow checks.
 - `src/components/gutafinn-map.test.tsx` covers one-time map initialization,

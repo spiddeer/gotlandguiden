@@ -21,6 +21,12 @@ const doubles = vi.hoisted(() => {
 
   const mapInstance = {
     addLayer: vi.fn(),
+    getBounds: vi.fn(() => ({
+      getNorth: () => 57.8,
+      getSouth: () => 57.2,
+      getEast: () => 18.9,
+      getWest: () => 18.1,
+    })),
     invalidateSize: vi.fn(),
     panTo: vi.fn(),
     remove: vi.fn(),
@@ -199,6 +205,26 @@ describe("GutafinnMap lifecycle", () => {
     expect(doubles.marker).toHaveBeenCalledTimes(2)
     expect(doubles.clusters.removeLayer).toHaveBeenCalledTimes(1)
     expect(doubles.clusters.clearLayers).not.toHaveBeenCalled()
+
+    await act(async () => root.unmount())
+  })
+
+  it("reports the current viewport when the user searches the map area", async () => {
+    const onSearchArea = vi.fn()
+    const root = createRoot(document.getElementById("root")!)
+    await renderMap(root, { onSearchArea })
+
+    const button = [...document.querySelectorAll("button")].find((item) =>
+      item.textContent?.includes("Sök i kartområdet"),
+    )
+    act(() => button?.click())
+
+    expect(onSearchArea).toHaveBeenCalledWith({
+      north: 57.8,
+      south: 57.2,
+      east: 18.9,
+      west: 18.1,
+    })
 
     await act(async () => root.unmount())
   })

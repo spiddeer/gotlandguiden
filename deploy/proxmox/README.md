@@ -219,6 +219,8 @@ Oppna `https://gutafinn.tobtech.se` i mobil och desktop och verifiera:
     kategori och kartfokus; `plats=<id>` valjer en giltig plats.
 11. Fran `Sparat`, verifiera dagsplan med GPS tillaten/nekad, alla tre
     fardsatten, etapp-lankar och fler an atta sparade platser.
+12. Panorera kartan, valj `Sok i kartomradet`, kontrollera samma urval i feeden
+    och aterstall sedan `Hela Gotland`, aven for ett tomt kartomrade.
 
 ### Verifiera release och databas i CT 201
 
