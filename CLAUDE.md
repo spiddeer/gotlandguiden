@@ -10,9 +10,10 @@ Gutafinn backend and deployment stack.
 - Runtime for frontend tooling: Node.js 22 or newer
 - UI: shadcn/ui `new-york`, Lucide icons, Fraunces and Inter
 - Backend: Node.js, Express and SQLite (`better-sqlite3`) in `backend/`
-- CMS: Node.js adminapp med passkeys/reservkonto i `cms/`; backend ar ensam
-  agare av domanschema och CMS vantar pa backend-health; besokarnas rattelser
-  granskas manuellt dar utan automatisk platsandring
+- CMS: Node.js admin app with passkeys/backup-account login in `cms/`; the
+  backend is sole owner of the domain schema and the CMS waits for backend
+  health; visitor corrections are reviewed manually there without automatic
+  place changes
 - Data: Gutafinn loads a curated 977-place visitor snapshot through `/api/*`;
   utility, accommodation, fuel and charging records are excluded before seed,
   while GPS drives real distances and Open-Meteo supplies live weather
