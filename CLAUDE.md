@@ -42,6 +42,9 @@ Gutafinn backend and deployment stack.
 - Keep `activeNav` separate from `feedMode` so map focus preserves filters and feed state.
 - Map-area search is explicit transient state in `src/lib/map-area.ts`; never
   auto-filter on `moveend`, persist bounds as GPS or rebuild Leaflet.
+- Practical filters in `src/lib/practical-filters.ts` may filter distance or
+  fact availability only. Do not infer open-now, free or wheelchair-accessible
+  from sparse/unstructured source data.
 - Keep the seven visitor filters and the per-place information dialog aligned
   with API address, contacts, opening hours, accessibility and sources.
 - Preserve the 320px mobile, 768/820px portrait-tablet and 1024-1440px split

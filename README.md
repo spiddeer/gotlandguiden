@@ -58,6 +58,8 @@ Produkten kombinerar:
 - Verkligt GPS-avstand, uppskattad gangtid och livevader/solnedgang
 - Beständig sparlista i localStorage
 - Delbara lankar som aterstaller sokning, kategori, kartfokus och vald plats
+- Praktiska filter for GPS-avstand och om oppettider, kontakt eller
+  tillganglighetsinformation finns i kallan
 - Fem genererade, optimerade WebP-bilder i `src/assets/`
 - shadcn/ui-komponenter, Lucide-ikoner och semantiska OKLCH-tokens
 - Tillgangliga fokus-, save- och navigationsstates samt safe-area-stod
@@ -168,8 +170,9 @@ enligt valt fardsatt.
 
 ## Delbara upptacktslankar
 
-Sokning, publik kategori, kartfokus och vald plats speglas i adressfaltet med
-`q`, `kategori`, `vy=karta` och `plats`. URL-varden valideras och okanda
+Sokning, publik kategori, kartfokus, vald plats och praktiska filter speglas i
+adressfaltet med `q`, `kategori`, `vy=karta`, `plats`, `radie` och `fakta`.
+URL-varden valideras och okanda
 kategorier eller ogiltiga plats-id:n ignoreras. Browserns bakat-/framatknappar
 aterstaller lankens state. Sparade plats-id:n och GPS-koordinater ingar aldrig i
 URL:en.
@@ -190,6 +193,16 @@ aktuella granser som ett extra filter. Samma grans appliceras pa listan och
 markorerna, ovanpa sokning, kategori och sparvy. En tydlig status i feeden
 aterstaller hela Gotland. Kartgransen ar tillfallig browser-state och lagras
 inte som GPS eller i den delbara URL:en.
+
+## Praktiska filter
+
+Filterpanelen kombinerar 1, 5 eller 10 km fran browserns aktuella GPS-position
+med tre kallnara val: `Oppettider finns`, `Kontakt finns` och
+`Tillganglighetsinfo`. De senare lovar bara att uppgiften finns, inte att en
+plats ar oppen eller fullt tillganglig. Snapshoten saknar strukturerade
+veckotider och har glest tillganglighetsunderlag, sa Gutafinn visar medvetet
+inte missvisande `Oppet nu`, `Gratis` eller `Rullstolsanpassat`-filter. Alla val
+kan rensas samlat och foljer med i en delbar URL utan GPS-koordinater.
 
 ## API
 

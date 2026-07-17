@@ -221,6 +221,8 @@ Oppna `https://gutafinn.tobtech.se` i mobil och desktop och verifiera:
     fardsatten, etapp-lankar och fler an atta sparade platser.
 12. Panorera kartan, valj `Sok i kartomradet`, kontrollera samma urval i feeden
     och aterstall sedan `Hela Gotland`, aven for ett tomt kartomrade.
+13. Kombinera 1/5/10 km med oppettids-, kontakt- och tillganglighetsinfo,
+    kontrollera tomt state, rensa allt och ladda om den delbara filter-URL:en.
 
 ### Verifiera release och databas i CT 201
 

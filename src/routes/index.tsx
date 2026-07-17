@@ -45,10 +45,16 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { DayPlanner } from "@/components/day-planner"
+import { PracticalFilters } from "@/components/practical-filters"
 import { GutafinnMap } from "@/components/gutafinn-map"
 import { SurpriseAdventure } from "@/components/surprise-adventure"
 import { buildDiscoverySearch, parseDiscoverySearch } from "@/lib/discovery-url"
 import { filterPlacesInBounds, type MapBounds } from "@/lib/map-area"
+import {
+  applyPracticalFilters,
+  countPracticalFilters,
+  type PracticalFilterState,
+} from "@/lib/practical-filters"
 import {
   countWithinRadius,
   filterPlaces,
@@ -173,6 +179,7 @@ function GutafinnPage() {
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(initialUrlState.selectedPlaceId)
   const [detailsPlaceId, setDetailsPlaceId] = useState<string | null>(null)
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null)
+  const [practicalFilters, setPracticalFilters] = useState<PracticalFilterState>(initialUrlState.practicalFilters)
   const requestedLocation = useRef(false)
   const placeRequestId = useRef(0)
   const splitLayout = useMediaQuery(SPLIT_LAYOUT_QUERY)
@@ -231,6 +238,8 @@ function GutafinnPage() {
       setQuery(next.query)
       setCategory(next.category)
       setSelectedPlaceId(next.selectedPlaceId)
+      setPracticalFilters(next.practicalFilters)
+      setMapBounds(null)
       setActiveNav(next.mapView ? "Karta" : "Hem")
       setFeedMode("Hem")
       setShowSurprise(false)
@@ -247,14 +256,15 @@ function GutafinnPage() {
       category,
       mapView: activeNav === "Karta",
       selectedPlaceId,
+      practicalFilters,
     })
     const nextUrl = `${window.location.pathname}${search}${window.location.hash}`
     if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== nextUrl) {
       window.history.replaceState(window.history.state, "", nextUrl)
     }
-  }, [activeNav, category, query, selectedPlaceId])
+  }, [activeNav, category, practicalFilters, query, selectedPlaceId])
 
-  const filteredPlaces = useMemo(
+  const discoveryPlaces = useMemo(
     () =>
       filterPlaces(
         places,
@@ -264,6 +274,10 @@ function GutafinnPage() {
         feedMode === "Sparat" ? saved : undefined,
       ),
     [category, feedMode, places, position, query, saved],
+  )
+  const filteredPlaces = useMemo(
+    () => applyPracticalFilters(discoveryPlaces, practicalFilters),
+    [discoveryPlaces, practicalFilters],
   )
   const visiblePlaces = useMemo(
     () => filterPlacesInBounds(filteredPlaces, mapBounds),
@@ -413,6 +427,13 @@ function GutafinnPage() {
               <div className="gutafinn-feed-content safe-bottom relative z-10 -mt-7 space-y-8 px-5">
                 <SearchBar query={query} onQueryChange={setQuery} onRequestLocation={requestLocation} />
                 <CategoryFilter selected={category} onSelect={setCategory} />
+                <PracticalFilters
+                  filters={practicalFilters}
+                  positionAvailable={position !== null}
+                  resultCount={visiblePlaces.length}
+                  onChange={setPracticalFilters}
+                  onRequestLocation={requestLocation}
+                />
                 {mapBounds && <MapAreaFilterStatus onClear={() => setMapBounds(null)} />}
                 {feedMode === "Hem" && <SurpriseCallout onOpen={() => setShowSurprise(true)} />}
                 {feedMode === "Sparat" && (
@@ -440,7 +461,15 @@ function GutafinnPage() {
                     </p>
                   </section>
                 ) : (
-                  <EmptyPlaces savedView={feedMode === "Sparat"} />
+                  <EmptyPlaces
+                    savedView={feedMode === "Sparat"}
+                    filtersActive={Boolean(
+                      query ||
+                      category !== "Allt" ||
+                      mapBounds ||
+                      countPracticalFilters(practicalFilters) > 0
+                    )}
+                  />
                 )}
 
                 {apiState === "ready" && visiblePlaces.length > 0 && (
@@ -1162,14 +1191,20 @@ function ApiUnavailable({ onRetry }: { onRetry: () => void }) {
   )
 }
 
-function EmptyPlaces({ savedView }: { savedView: boolean }) {
+function EmptyPlaces({ savedView, filtersActive }: { savedView: boolean; filtersActive: boolean }) {
   return (
     <Card className="border-dashed p-6 text-center">
       <p className="font-display text-xl text-sea-deep">
-        {savedView ? "Din Gotlandslista börjar här" : "Prova ett annat sökord"}
+        {filtersActive
+          ? "Inga platser matchar filtren"
+          : savedView
+            ? "Din Gotlandslista börjar här"
+            : "Prova ett annat sökord"}
       </p>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        {savedView
+        {filtersActive
+          ? "Rensa ett filter eller välj hela Gotland för att se fler träffar."
+          : savedView
           ? "Tryck på hjärtat vid en plats så sparas den till nästa besök."
           : "Det finns fler raukar, bad och smaker att hitta i guiden."}
       </p>

@@ -152,6 +152,8 @@ warm restrained light and no embedded text or logos. Preserve meaningful
   position as a separate, non-interactive user marker.
 - `Sök i kartområdet` applies the current viewport only on explicit activation.
   Its active state is visible in the feed and offers a 44px reset to all Gotland.
+- Practical filters live in a collapsible, keyboard-operable panel. Distance is
+  disabled until GPS exists; fact filters state only that source data exists.
 - The Leaflet map instance is initialized once. Marker clusters, GPS state and
   selected-place state update independently so filtering and nav changes do not
   rebuild or race the map.
@@ -192,6 +194,8 @@ interface labels.
   category and feed mode.
 - Pan/zoom does not silently change results. Activating and clearing the map-area
   filter updates list and markers together, including a zero-result viewport.
+- Practical filters combine correctly, expose active/result counts, have one
+  clear-all action and never relabel raw hours as currently open.
 - Browser smoke covers 320, 390, 768, 820, 1024 landscape, 1280 and 1440px,
   including denied GPS and horizontal-overflow checks.
 - `src/components/gutafinn-map.test.tsx` covers one-time map initialization,

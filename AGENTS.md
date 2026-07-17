@@ -76,6 +76,8 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
 - `src/lib/day-planner.ts`: deterministisk narsta-stopp-ordning, max atta stopp
   och beraknad stracka/restid.
 - `src/lib/map-area.ts`: validerad viewportfiltrering inklusive datumlinje-fall.
+- `src/lib/practical-filters.ts`: kombinerbara filter for GPS-radie och
+  forekomst av oppettider, kontakt samt tillganglighetsuppgift.
 - `src/lib/places.test.ts`: frontendtester for datamappning och sanningsenliga states.
 - `src/styles.css`: Tailwind v4, Leaflet/markercluster-CSS, `@theme inline` och semantiska OKLCH-tokens.
 - `src/components/ui/`: shadcn/ui-komponenter i `new-york`-stil.
@@ -135,8 +137,8 @@ sokning, kategori eller sparvy. Listval och markorklick ska synka
 oforandrade markorer for filter, GPS eller val; initiering, markordiff,
 GPS och selection ska forbli separata.
 
-URL-state far endast innehalla sokfras, publik kategori, `vy=karta` och ett
-validerat plats-id. GPS-koordinater och innehållet i sparlistan far aldrig
+URL-state far endast innehalla sokfras, publik kategori, `vy=karta`, ett
+validerat plats-id och praktiska filter via `radie`/`fakta`. GPS-koordinater och innehållet i sparlistan far aldrig
 serialiseras. Okanda URL-varden ska falla tillbaka till `Allt`/hemmavy, och
 browserhistorik ska kunna aterstalla state utan full sidladdning.
 
@@ -149,6 +151,12 @@ Kartomradesfiltret ar ett explicit, tillfalligt filter ovanpa sokning, kategori
 och sparvy. `GutafinnMap` rapporterar endast aktuella Leaflet-granser nar
 anvandaren trycker pa knappen. Feeden ska alltid visa aktiv status och kunna
 aterstalla hela Gotland; GPS och URL-state far inte blandas ihop med viewporten.
+
+Praktiska filter far bara pasta att underlag finns. `Oppettider finns` betyder
+inte `Oppet nu`, och `Tillganglighetsinfo` betyder inte automatiskt full
+tillganglighet. Avstandsfilter ar 1/5/10 km och ska inte exkludera data innan en
+GPS-position finns. Alla praktiska filter kombineras med sokning, kategori,
+sparvy och eventuellt kartomrade.
 Leaflet-kontroller, markorer och attribution maste vara tangentbords-/touchbara,
 och OpenStreetMap-krediteringen ska vara permanent lasbar pa alla viewportstorlekar.
 
@@ -276,6 +284,8 @@ aterstallbart kartfokus, bevarade filter och synlig OpenStreetMap-attribution.
     GPS, Open-Meteo, Google Fonts, kartplattor och bada hostnamnens CSP.
 14. Vid kartomradesandringar: testa bounds-filtret och callbacken utan att flytta
     Leaflet-instansens agarskap eller koppla filtrering till `moveend` automatiskt.
+15. Lagga aldrig till `Oppet nu`, pris- eller tillganglighetsloften utan
+    tillrackligt strukturerat underlag och sanningsenliga tomma states.
 
 ## Snabb felsokning
 

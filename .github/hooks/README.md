@@ -127,6 +127,9 @@ Skyddar mot:
     OSM-motorerna for gang, cykel samt bil.
 15. Vid kartomradessokning: utoka `map-area.test.ts` och kartkomponenttestet.
     Panorering far inte auto-filtrera, och reset ska aterstalla hela katalogen.
+16. Vid praktiska filter: utoka `practical-filters.test.ts` och URL-testerna.
+    Testa kombinationer, saknad GPS, tomma resultat och att copy inte overdriver
+    vad kallans oppettids-/tillganglighetsdata faktiskt sager.
 
 `Overraska mig` ska fortsatt ha ren, testbar domanlogik i `src/lib/surprise.ts`,
 begransad localStorage-hantering i `src/lib/surprise-storage.ts` och UI i
