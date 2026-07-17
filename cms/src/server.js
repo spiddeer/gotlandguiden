@@ -10,7 +10,8 @@ import {
   sessionCookie, verifyCredentials,
 } from './security.js';
 import {
-  correctionsView, dashboardView, errorView, loginView, notFoundView, placeFormView, placesView, signupView,
+  collectionFormView, collectionsView, correctionsView, dashboardView, errorView, loginView,
+  notFoundView, placeFormView, placesView, signupView,
 } from './views.js';
 
 const assetsDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
@@ -80,6 +81,26 @@ function inputForView(input, id = '') {
   };
 }
 
+function collectionInput(body) {
+  return {
+    id: body.get('id') || '',
+    title: body.get('title') || '',
+    description: body.get('description') || '',
+    sortOrder: body.get('sortOrder') || '0',
+    isPublished: body.has('isPublished'),
+    placeIds: body.getAll('placeId[]'),
+  };
+}
+
+function collectionForView(input, id = '') {
+  return {
+    ...input,
+    id: id || input.id,
+    sort_order: input.sortOrder,
+    is_published: input.isPublished ? 1 : 0,
+  };
+}
+
 function clientAddress(request) {
   return String(request.headers['x-forwarded-for'] || request.socket.remoteAddress || 'unknown').split(',')[0].trim();
 }
@@ -89,7 +110,13 @@ function isValidCsrf(body, session) {
 }
 
 function notice(code) {
-  return ({ created: 'Platsen skapades och är nu sparad.', updated: 'Ändringarna sparades.', archived: 'Platsen arkiverades.', restored: 'Platsen återställdes.', correction: 'Rättelsen uppdaterades.' })[code] || '';
+  return ({
+    created: 'Platsen skapades och är nu sparad.', updated: 'Ändringarna sparades.',
+    archived: 'Platsen arkiverades.', restored: 'Platsen återställdes.',
+    correction: 'Rättelsen uppdaterades.', collectionCreated: 'Samlingen skapades.',
+    collectionUpdated: 'Samlingen sparades.', collectionPublished: 'Samlingen publicerades.',
+    collectionDraft: 'Samlingen avpublicerades.',
+  })[code] || '';
 }
 
 async function serveAsset(pathname, response) {
@@ -205,6 +232,67 @@ export function createApp(overrides = {}, dependencies = {}) {
           page: Number.parseInt(url.searchParams.get('page') || '1', 10),
         };
         return send(response, 200, placesView({ result: store.listPlaces(filters), categories: store.categories(), filters, csrf: session.csrf, user, notice: notice(url.searchParams.get('notice')) }));
+      }
+      if (url.pathname === '/admin/collections' && method === 'GET') {
+        return send(response, 200, collectionsView({
+          rows: store.listCollections(), csrf: session.csrf, user,
+          notice: notice(url.searchParams.get('notice')),
+        }));
+      }
+      if (url.pathname === '/admin/collections/new' && method === 'GET') {
+        return send(response, 200, collectionFormView({
+          collection: { id: '', title: '', description: '', sort_order: 0, is_published: 0, placeIds: [] },
+          places: store.collectionPlaces(), csrf: session.csrf, user, isNew: true,
+        }));
+      }
+      if (url.pathname === '/admin/collections' && method === 'POST') {
+        const body = await readBody(request);
+        if (!isValidCsrf(body, session)) return send(response, 403, 'Ogiltig säkerhetstoken.', 'text/plain; charset=utf-8');
+        const input = collectionInput(body);
+        const result = store.saveCollection(input);
+        if (Object.keys(result.errors).length) return send(response, 422, collectionFormView({
+          collection: collectionForView(input), places: store.collectionPlaces(), errors: result.errors,
+          csrf: session.csrf, user, isNew: true,
+        }));
+        return redirect(response, `/admin/collections/${encodeURIComponent(result.id)}/edit?notice=collectionCreated`);
+      }
+      const collectionEditMatch = url.pathname.match(/^\/admin\/collections\/([^/]+)\/edit$/);
+      if (collectionEditMatch && method === 'GET') {
+        const collection = store.getCollection(decodeURIComponent(collectionEditMatch[1]));
+        if (!collection) return send(response, 404, notFoundView({ user }));
+        return send(response, 200, collectionFormView({
+          collection, places: store.collectionPlaces(), csrf: session.csrf, user,
+          notice: notice(url.searchParams.get('notice')),
+        }));
+      }
+      const collectionMatch = url.pathname.match(/^\/admin\/collections\/([^/]+)$/);
+      if (collectionMatch && method === 'POST') {
+        const body = await readBody(request);
+        if (!isValidCsrf(body, session)) return send(response, 403, 'Ogiltig säkerhetstoken.', 'text/plain; charset=utf-8');
+        const id = decodeURIComponent(collectionMatch[1]);
+        const input = collectionInput(body);
+        const result = store.saveCollection(input, id);
+        if (result.notFound) return send(response, 404, notFoundView({ user }));
+        if (Object.keys(result.errors).length) return send(response, 422, collectionFormView({
+          collection: collectionForView(input, id), places: store.collectionPlaces(), errors: result.errors,
+          csrf: session.csrf, user,
+        }));
+        return redirect(response, `/admin/collections/${encodeURIComponent(id)}/edit?notice=collectionUpdated`);
+      }
+      const collectionStatusMatch = url.pathname.match(/^\/admin\/collections\/([^/]+)\/status$/);
+      if (collectionStatusMatch && method === 'POST') {
+        const body = await readBody(request);
+        if (!isValidCsrf(body, session)) return send(response, 403, 'Ogiltig säkerhetstoken.', 'text/plain; charset=utf-8');
+        const published = body.get('published') === '1';
+        const result = store.setCollectionPublished(decodeURIComponent(collectionStatusMatch[1]), published);
+        if (result === null) {
+          return send(response, 404, notFoundView({ user }));
+        }
+        if (result === false) return send(response, 422, collectionsView({
+          rows: store.listCollections(), csrf: session.csrf, user,
+          error: 'Samlingen behöver minst två aktiva platser innan den kan publiceras.',
+        }));
+        return redirect(response, `/admin/collections?notice=${published ? 'collectionPublished' : 'collectionDraft'}`);
       }
       if (url.pathname === '/admin/corrections' && method === 'GET') {
         const status = ['new', 'reviewed', 'resolved', 'dismissed', 'all'].includes(url.searchParams.get('status'))

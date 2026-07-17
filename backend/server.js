@@ -8,6 +8,7 @@ const {
   savePlace,
 } = require("./place-repository");
 const { createCorrection } = require("./correction-repository");
+const { listPublishedCollections } = require("./collection-repository");
 
 const PORT = process.env.PORT || 8080;
 const API_KEY = process.env.API_KEY || "";
@@ -152,6 +153,11 @@ function createApp(database = db, {
   app.get("/api/places", (req, res) => {
     res.set("Cache-Control", PUBLIC_CACHE_CONTROL);
     res.json(listPlaces(database));
+  });
+
+  app.get("/api/collections", (req, res) => {
+    res.set("Cache-Control", PUBLIC_CACHE_CONTROL);
+    res.json(listPublishedCollections(database));
   });
 
   app.get("/api/places/:id", (req, res) => {

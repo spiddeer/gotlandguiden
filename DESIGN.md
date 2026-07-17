@@ -132,7 +132,11 @@ warm restrained light and no embedded text or logos. Preserve meaningful
 - Weather and sunset come from Open-Meteo for the user position or Ljugarn fallback.
 - Save controls persist IDs in localStorage and expose `aria-pressed`.
 - Search, category, map focus and selected place have a compact shareable URL;
-  saved IDs and GPS coordinates never appear in it.
+  editorial collection may use `samling`; saved IDs and GPS coordinates never appear in it.
+- Published editorial collections appear as horizontally scrollable cards with
+  title, rationale and honest place count. Selecting one preserves its authored
+  order, exposes a prominent removable context card and combines with existing
+  search, fact and map-area filters.
 - Saved view exposes an internal day planner. It orders at most eight stops,
   distinguishes estimates from routed facts and opens one accessible OSM leg
   at a time for walking, bicycle or car.
@@ -207,6 +211,8 @@ interface labels.
   map tiles, weather or opening facts.
 - Correction form validates required input, succeeds into the editorial queue,
   handles server/rate-limit/offline errors and never changes the displayed place.
+- Editorial collections remain keyboard operable at 320-1440px, restore from a
+  shared URL and disappear safely when unpublished or reduced below two active places.
 - Browser smoke covers 320, 390, 768, 820, 1024 landscape, 1280 and 1440px,
   including denied GPS and horizontal-overflow checks.
 - `src/components/gutafinn-map.test.tsx` covers one-time map initialization,

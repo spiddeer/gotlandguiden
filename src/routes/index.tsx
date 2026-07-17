@@ -46,11 +46,13 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { DayPlanner } from "@/components/day-planner"
+import { EditorialCollections } from "@/components/editorial-collections"
 import { PracticalFilters } from "@/components/practical-filters"
 import { VisitorCorrectionForm } from "@/components/visitor-correction-form"
 import { GutafinnMap } from "@/components/gutafinn-map"
 import { SurpriseAdventure } from "@/components/surprise-adventure"
 import { buildDiscoverySearch, parseDiscoverySearch } from "@/lib/discovery-url"
+import { parseEditorialCollections, type EditorialCollection } from "@/lib/collections"
 import { filterPlacesInBounds, type MapBounds } from "@/lib/map-area"
 import {
   applyPracticalFilters,
@@ -187,6 +189,8 @@ function GutafinnPage() {
   )
   const [places, setPlaces] = useState<ApiPlace[]>([])
   const [apiState, setApiState] = useState<"loading" | "ready" | "error">("loading")
+  const [collections, setCollections] = useState<EditorialCollection[]>([])
+  const [collectionsState, setCollectionsState] = useState<"loading" | "ready">("loading")
   const [category, setCategory] = useState<Category>(initialUrlState.category)
   const [query, setQuery] = useState(initialUrlState.query)
   const [saved, setSaved] = useState<Set<string>>(loadSavedIds)
@@ -198,11 +202,13 @@ function GutafinnPage() {
   const [showSurprise, setShowSurprise] = useState(false)
   const [showDayPlanner, setShowDayPlanner] = useState(false)
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(initialUrlState.selectedPlaceId)
+  const [activeCollectionId, setActiveCollectionId] = useState<string | null>(initialUrlState.collectionId)
   const [detailsPlaceId, setDetailsPlaceId] = useState<string | null>(null)
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null)
   const [practicalFilters, setPracticalFilters] = useState<PracticalFilterState>(initialUrlState.practicalFilters)
   const requestedLocation = useRef(false)
   const placeRequestId = useRef(0)
+  const collectionRequestId = useRef(0)
   const splitLayout = useMediaQuery(SPLIT_LAYOUT_QUERY)
   const online = useOnlineStatus()
 
@@ -220,6 +226,22 @@ function GutafinnPage() {
       if (requestId !== placeRequestId.current) return
       setPlaces([])
       setApiState("error")
+    }
+  }, [])
+
+  const loadCollections = useCallback(async () => {
+    const requestId = ++collectionRequestId.current
+    try {
+      const response = await fetch("/api/collections", { headers: { Accept: "application/json" } })
+      if (!response.ok) throw new Error("Samlingar kunde inte hämtas")
+      const data = parseEditorialCollections(await response.json())
+      if (requestId !== collectionRequestId.current) return
+      setCollections(data)
+    } catch {
+      if (requestId !== collectionRequestId.current) return
+      setCollections([])
+    } finally {
+      if (requestId === collectionRequestId.current) setCollectionsState("ready")
     }
   }, [])
 
@@ -242,7 +264,8 @@ function GutafinnPage() {
 
   useEffect(() => {
     void loadPlaces()
-  }, [loadPlaces])
+    void loadCollections()
+  }, [loadCollections, loadPlaces])
 
   useEffect(() => {
     if (requestedLocation.current) return
@@ -260,6 +283,7 @@ function GutafinnPage() {
       setQuery(next.query)
       setCategory(next.category)
       setSelectedPlaceId(next.selectedPlaceId)
+      setActiveCollectionId(next.collectionId)
       setPracticalFilters(next.practicalFilters)
       setMapBounds(null)
       setActiveNav(next.mapView ? "Karta" : "Hem")
@@ -278,24 +302,39 @@ function GutafinnPage() {
       category,
       mapView: activeNav === "Karta",
       selectedPlaceId,
+      collectionId: activeCollectionId,
       practicalFilters,
     })
     const nextUrl = `${window.location.pathname}${search}${window.location.hash}`
     if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== nextUrl) {
       window.history.replaceState(window.history.state, "", nextUrl)
     }
-  }, [activeNav, category, practicalFilters, query, selectedPlaceId])
+  }, [activeCollectionId, activeNav, category, practicalFilters, query, selectedPlaceId])
+
+  const activeCollection = useMemo(
+    () => collections.find((collection) => collection.id === activeCollectionId) ?? null,
+    [activeCollectionId, collections],
+  )
+  const collectionScopedPlaces = useMemo(() => {
+    if (!activeCollection) return places
+    const placeById = new Map(places.map((place) => [place.id, place]))
+    return activeCollection.placeIds.flatMap((placeId) => {
+      const place = placeById.get(placeId)
+      return place ? [place] : []
+    })
+  }, [activeCollection, places])
 
   const discoveryPlaces = useMemo(
     () =>
       filterPlaces(
-        places,
+        collectionScopedPlaces,
         category,
         query,
         position,
         feedMode === "Sparat" ? saved : undefined,
+        activeCollection !== null,
       ),
-    [category, feedMode, places, position, query, saved],
+    [activeCollection, category, collectionScopedPlaces, feedMode, position, query, saved],
   )
   const filteredPlaces = useMemo(
     () => applyPracticalFilters(discoveryPlaces, practicalFilters),
@@ -305,6 +344,12 @@ function GutafinnPage() {
     () => filterPlacesInBounds(filteredPlaces, mapBounds),
     [filteredPlaces, mapBounds],
   )
+
+  useEffect(() => {
+    if (collectionsState === "ready" && activeCollectionId && !activeCollection) {
+      setActiveCollectionId(null)
+    }
+  }, [activeCollection, activeCollectionId, collectionsState])
 
   const nearbyCount = useMemo(
     () => (position ? countWithinRadius(places, position, 5) : null),
@@ -388,6 +433,7 @@ function GutafinnPage() {
     setShowDayPlanner(false)
     setActiveNav(label)
     if (label !== "Karta") setFeedMode(label)
+    if (label === "Sparat" || label === "Nära") setActiveCollectionId(null)
     if (label === "Nära") requestLocation()
   }
 
@@ -458,6 +504,19 @@ function GutafinnPage() {
               <div className="gutafinn-feed-content safe-bottom relative z-10 -mt-7 space-y-8 px-5">
                 <SearchBar query={query} onQueryChange={setQuery} onRequestLocation={requestLocation} />
                 <CategoryFilter selected={category} onSelect={setCategory} />
+                {feedMode === "Hem" && (
+                  <EditorialCollections
+                    collections={collections}
+                    activeCollection={activeCollection}
+                    onSelect={(collectionId) => {
+                      setActiveCollectionId(collectionId)
+                      setSelectedPlaceId(null)
+                      setDetailsPlaceId(null)
+                      setMapBounds(null)
+                    }}
+                    onClear={() => setActiveCollectionId(null)}
+                  />
+                )}
                 <PracticalFilters
                   filters={practicalFilters}
                   positionAvailable={position !== null}
@@ -478,7 +537,9 @@ function GutafinnPage() {
                 ) : featuredPlace ? (
                   <section aria-labelledby="nearby-heading">
                     <SectionHeading id="nearby-heading">
-                      {position ? "Närmast dig nu" : feedMode === "Sparat" ? "Dina sparade platser" : "Utvalt på Gotland"}
+                      {activeCollection
+                        ? activeCollection.title
+                        : position ? "Närmast dig nu" : feedMode === "Sparat" ? "Dina sparade platser" : "Utvalt på Gotland"}
                     </SectionHeading>
                     <FeaturedPlace
                       place={featuredPlace}
@@ -497,6 +558,7 @@ function GutafinnPage() {
                     filtersActive={Boolean(
                       query ||
                       category !== "Allt" ||
+                      activeCollection ||
                       mapBounds ||
                       countPracticalFilters(practicalFilters) > 0
                     )}
@@ -507,7 +569,7 @@ function GutafinnPage() {
                   <section aria-labelledby="feed-heading">
                     <div className="mb-4 flex items-end justify-between gap-4">
                       <SectionHeading id="feed-heading" className="mb-0">
-                        {position ? "Runt din plats" : "Fler tips på Gotland"}
+                        {activeCollection ? "Fler i samlingen" : position ? "Runt din plats" : "Fler tips på Gotland"}
                       </SectionHeading>
                       <span className="shrink-0 text-xs font-semibold text-muted-foreground">
                         {visiblePlaces.length.toLocaleString("sv-SE")} träffar

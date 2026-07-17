@@ -12,6 +12,7 @@ SQLite-databas som backend och skyddas med passkeys eller ett reservkonto.
 - Publicera, arkivera och återställ platser utan att radera källdata
 - Granska besökarnas rättelseförslag som nya, granskade, lösta eller avfärdade
   utan att rapporten automatiskt ändrar platsdata
+- Skapa, ordna, publicera och avpublicera redaktionella samlingar med 2–20 platser
 - JSON-API för aktiva platser och kategorier
 - Signerade sessioner, CSRF-skydd, inloggningsbegränsning och servervalidering
 - Responsivt och tangentbordsanvändbart gränssnitt på svenska
@@ -44,6 +45,11 @@ Backendmigration 5 skapar `visitor_corrections`; CMS:et skapar inte tabellen.
 Publika rapporter kan innehålla frivillig e-post men aldrig lagrad IP-adress.
 Redaktören kan sätta status och granskningsanteckning i `/admin/corrections`.
 Eventuella sakändringar görs separat i platsredigeringen.
+
+Backendmigration 6 skapar `collections` och `collection_places`. Samlingseditorn
+använder befintliga plats-ID:n i vald ordning och kräver 2–20 unika platser.
+Endast publicerade samlingar med minst två fortfarande aktiva platser exponeras
+av det publika API:t.
 
 Passkeys är avstängda i produktion tills `PASSKEY_RP_ID` och `PASSKEY_ORIGIN` anges. `PASSKEY_RP_ID` är domännamnet utan protokoll, exempelvis `cms.example.com`. `PASSKEY_ORIGIN` är den exakta externa HTTPS-adressen, exempelvis `https://cms.example.com`.
 

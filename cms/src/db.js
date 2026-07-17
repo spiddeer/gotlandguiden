@@ -10,7 +10,7 @@ const PUBLIC_CATEGORY_IDS = [
 const PUBLIC_CATEGORY_SQL = PUBLIC_CATEGORY_IDS.map((category) => `'${category}'`).join(', ');
 const REQUIRED_DOMAIN_TABLES = [
   'categories', 'places', 'place_details', 'place_contacts', 'place_images', 'place_categories',
-  'visitor_corrections',
+  'visitor_corrections', 'collections', 'collection_places',
 ];
 
 function assertDomainSchema(db) {
@@ -94,8 +94,99 @@ export function openDatabase(databasePath) {
       SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) active,
       SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END) archived,
       COUNT(DISTINCT category) categories,
-      (SELECT COUNT(*) FROM visitor_corrections WHERE status='new') corrections
+      (SELECT COUNT(*) FROM visitor_corrections WHERE status='new') corrections,
+      (SELECT COUNT(*) FROM collections WHERE is_published=1) collections
       FROM places`).get();
+  }
+
+  function collectionPlaces() {
+    return db.prepare(`SELECT id, name, is_active FROM places
+      ORDER BY is_active DESC, name COLLATE NOCASE, id`).all();
+  }
+
+  function listCollections() {
+    return db.prepare(`SELECT c.*,
+      (SELECT COUNT(*) FROM collection_places cp WHERE cp.collection_id=c.id) place_count
+      FROM collections c ORDER BY c.sort_order, c.title COLLATE NOCASE, c.id`).all();
+  }
+
+  function getCollection(id) {
+    const collection = db.prepare('SELECT * FROM collections WHERE id=?').get(id);
+    if (!collection) return null;
+    collection.placeIds = db.prepare(`SELECT place_id FROM collection_places
+      WHERE collection_id=? ORDER BY sort_order, place_id`).all(id).map((row) => row.place_id);
+    return collection;
+  }
+
+  function validateCollection(input, existingId = null) {
+    const errors = {};
+    const requestedId = clean(input.id);
+    const id = existingId || requestedId || slugify(input.title || 'samling');
+    const title = clean(input.title);
+    const description = clean(input.description);
+    const sortOrder = Number.parseInt(input.sortOrder, 10);
+    const placeIds = [...new Set((input.placeIds || []).map(clean).filter(Boolean))];
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) errors.id = 'ID får bara innehålla små bokstäver, siffror och bindestreck.';
+    if (!existingId && db.prepare('SELECT 1 FROM collections WHERE id=?').get(id)) errors.id = 'ID används redan av en annan samling.';
+    if (!title || title.length < 2 || title.length > 80) errors.title = 'Ange en titel med 2–80 tecken.';
+    if (!description || description.length < 10 || description.length > 500) errors.description = 'Ange en beskrivning med 10–500 tecken.';
+    if (!Number.isInteger(sortOrder) || sortOrder < 0 || sortOrder > 9999) errors.sortOrder = 'Ange en sortering mellan 0 och 9999.';
+    if (placeIds.length < 2 || placeIds.length > 20) errors.placeIds = 'Välj 2–20 unika platser i önskad ordning.';
+    if (placeIds.length) {
+      const rows = db.prepare(`SELECT id, is_active FROM places WHERE id IN (${placeIds.map(() => '?').join(',')})`).all(...placeIds);
+      const known = new Set(rows.map((row) => row.id));
+      if (known.size !== placeIds.length) errors.placeIds = 'En eller flera platser finns inte i registret.';
+      else if (input.isPublished && rows.filter((row) => row.is_active).length < 2) {
+        errors.placeIds = 'En publicerad samling måste innehålla minst två aktiva platser.';
+      }
+    }
+    return {
+      errors,
+      values: { id, title, description, sortOrder, isPublished: Boolean(input.isPublished), placeIds },
+    };
+  }
+
+  function saveCollection(input, existingId = null) {
+    if (existingId && !getCollection(existingId)) return { notFound: true, errors: {} };
+    const parsed = validateCollection(input, existingId);
+    if (Object.keys(parsed.errors).length) return parsed;
+    const values = parsed.values;
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      if (existingId) {
+        db.prepare(`UPDATE collections SET title=?, description=?, is_published=?,
+          sort_order=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(
+          values.title, values.description, values.isPublished ? 1 : 0, values.sortOrder, existingId,
+        );
+      } else {
+        db.prepare(`INSERT INTO collections
+          (id,title,description,is_published,sort_order) VALUES (?,?,?,?,?)`).run(
+          values.id, values.title, values.description, values.isPublished ? 1 : 0, values.sortOrder,
+        );
+      }
+      const id = existingId || values.id;
+      db.prepare('DELETE FROM collection_places WHERE collection_id=?').run(id);
+      const addPlace = db.prepare(`INSERT INTO collection_places
+        (collection_id,place_id,sort_order) VALUES (?,?,?)`);
+      values.placeIds.forEach((placeId, index) => addPlace.run(id, placeId, index));
+      db.exec('COMMIT');
+      return { ...parsed, id };
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+  }
+
+  function setCollectionPublished(id, published) {
+    if (!db.prepare('SELECT 1 FROM collections WHERE id=?').get(id)) return null;
+    if (published) {
+      const activePlaces = db.prepare(`SELECT COUNT(*) count FROM collection_places cp
+        JOIN places p ON p.id=cp.place_id AND p.is_active=1 WHERE cp.collection_id=?`).get(id).count;
+      if (activePlaces < 2) return false;
+    }
+    db.prepare(`UPDATE collections SET is_published=?, updated_at=CURRENT_TIMESTAMP
+      WHERE id=?`).run(published ? 1 : 0, id);
+    return true;
   }
 
   function listCorrections({ status = 'new' } = {}) {
@@ -367,6 +458,7 @@ export function openDatabase(databasePath) {
 
   return {
     db, categories, stats, listPlaces, getPlace, createPlace, editPlace, setActive, publicPlaces,
+    collectionPlaces, listCollections, getCollection, saveCollection, setCollectionPublished,
     listCorrections, updateCorrection,
     getCmsUserByUsername, getCmsUserById, listPasskeysForUser, getPasskeyCredential,
     createWebAuthnChallenge, getWebAuthnChallenge, registerCmsUser, finishPasskeyAuthentication,

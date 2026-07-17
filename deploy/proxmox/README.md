@@ -44,7 +44,7 @@ anvander `UPSERT`, sa befintlig berikning bevaras nar OSM-snapshoten importeras 
 Tidigare OSM-poster som saknas i den nya snapshoten markeras inaktiva men ligger
 kvar i SQLite for historik och eventuell manuell berikning.
 
-Backend ar ensam agare av domanschemat. Fem migreringar ar aktiva. Migrering 4
+Backend ar ensam agare av domanschemat. Sex migreringar ar aktiva. Migrering 4
 kallmarker importerade
 kategorikopplingar, sa nya OSM-snapshots kan synka just de kopplingarna utan att
 ta bort manuellt tillagda kategorier. Publika API-anrop visar bara
@@ -53,6 +53,9 @@ Migrering 5 skapar besokarnas rattelseko. Publika rapporter begransas som
 standard till fem forsok per IP/timme utan att IP lagras; frivillig e-post och
 rapporttext sparas for manuell CMS-granskning. Statusandringar i kon far aldrig
 andra platsdata automatiskt.
+Migrering 6 skapar redaktionella samlingar och deras ordnade platslankar.
+`/api/collections` returnerar endast publicerade samlingar med minst tva aktiva
+platser; service workern cachelagrar samma publika svar network-first.
 
 ## Kataloger i CT 201
 
@@ -210,6 +213,7 @@ curl -fsSI https://gutafinn.tobtech.se/sw.js
 curl -fsSI https://gutafinn.tobtech.se/manifest.webmanifest
 curl -fsS https://gutafinn.tobtech.se/api/categories
 curl -fsS https://gutafinn.tobtech.se/api/places | head
+curl -fsS https://gutafinn.tobtech.se/api/collections
 curl -fsSI https://gutafinn-admin.tobtech.se/admin/login
 ```
 

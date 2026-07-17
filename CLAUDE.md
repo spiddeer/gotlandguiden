@@ -25,6 +25,8 @@ Gutafinn backend and deployment stack.
   backed by pure selection logic and bounded browser-only history
 - Planning: `Planera min dag` uses `src/lib/day-planner.ts` to order at most
   eight saved places; plans and GPS are never persisted
+- Editorial collections: backend migration 6 owns ordered collection links;
+  CMS publishes them and the frontend restores a valid `samling=` URL
 - Deployment: Docker Compose in Proxmox LXC CT 201 behind Cloudflare Tunnel in CT 200
 - Production: `https://gutafinn.tobtech.se`
 - Compatibility URL: `https://gotland.tobtech.se` permanently redirects to the
@@ -53,13 +55,17 @@ Gutafinn backend and deployment stack.
   the CMS status queue. Preserve the six correction types, 10-1000 character
   message, optional email, honeypot, five attempts/IP/hour and no stored IP.
   The form is online-only and the queue must never mutate place data directly.
+- Collections use `/api/collections`, must contain 2-20 ordered place IDs and
+  are public only when published with at least two active places. Preserve their
+  authored order and never copy collection state into place records.
 - Keep the seven visitor filters and the per-place information dialog aligned
   with API address, contacts, opening hours, accessibility and sources.
 - Preserve the 320px mobile, 768/820px portrait-tablet and 1024-1440px split
   contracts, Swedish copy, 44px targets, focus states and safe areas.
 - Saved place IDs persist in localStorage under `gutafinn_saved_places`.
 - Shareable discovery state is owned by `src/lib/discovery-url.ts` and may only
-  include query, public category, map focus and a validated place ID.
+  include query, public category, map focus, a validated place ID and an
+  editorial `samling` ID.
 - Surprise preferences/history use the four `gutafinn_surprise_*` keys, keep at
   most 20 IDs/categories and never persist GPS coordinates.
 - Surprise ranking is limited to distance, product-category diversity,

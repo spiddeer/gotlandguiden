@@ -1,7 +1,7 @@
 const STATIC_CACHE = "gutafinn-static-__BUILD_VERSION__"
 const DATA_CACHE = "gutafinn-data-v1"
 const PRECACHE_URLS = __PRECACHE_URLS__
-const DATA_URLS = ["/api/places", "/api/categories"]
+const DATA_URLS = ["/api/places", "/api/categories", "/api/collections"]
 
 async function warmDataCache() {
   const cache = await caches.open(DATA_CACHE)
@@ -74,7 +74,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url)
   if (url.origin !== self.location.origin) return
 
-  if (url.pathname === "/api/places" || url.pathname === "/api/categories") {
+  if (DATA_URLS.includes(url.pathname)) {
     event.respondWith(networkFirstData(request))
     return
   }

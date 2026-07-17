@@ -67,6 +67,43 @@ test("the health check confirms that the database is ready", async () => {
   });
 });
 
+test("the API exposes only published editorial collections with active places", async () => {
+  await withServer({}, async ({ baseUrl, database }) => {
+    database.prepare(`INSERT INTO places
+      (id,name,category,lat,lng,description,is_active) VALUES (?,?,?,?,?,?,?)`)
+      .run("active-place", "Aktiv plats", "natur", 57.5, 18.5, "Test", 1);
+    database.prepare(`INSERT INTO places
+      (id,name,category,lat,lng,description,is_active) VALUES (?,?,?,?,?,?,?)`)
+      .run("archived-place", "Arkiverad plats", "natur", 57.6, 18.6, "Test", 0);
+    database.prepare(`INSERT INTO places
+      (id,name,category,lat,lng,description,is_active) VALUES (?,?,?,?,?,?,?)`)
+      .run("active-place-two", "Andra aktiva platsen", "natur", 57.7, 18.7, "Test", 1);
+    const addCollection = database.prepare(`INSERT INTO collections
+      (id,title,description,is_published,sort_order) VALUES (?,?,?,?,?)`);
+    addCollection.run("helgtur", "Helgtur", "Tre redaktionellt valda stopp på Gotland.", 1, 2);
+    addCollection.run("utkast", "Utkast", "Den här samlingen är inte publicerad ännu.", 0, 1);
+    addCollection.run("kort", "För kort", "En publicerad samling med bara en aktiv plats.", 1, 3);
+    const addPlace = database.prepare(`INSERT INTO collection_places
+      (collection_id,place_id,sort_order) VALUES (?,?,?)`);
+    addPlace.run("helgtur", "active-place", 0);
+    addPlace.run("helgtur", "archived-place", 1);
+    addPlace.run("helgtur", "active-place-two", 2);
+    addPlace.run("utkast", "active-place", 0);
+    addPlace.run("kort", "active-place", 0);
+
+    const response = await fetch(`${baseUrl}/api/collections`);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("cache-control"), /stale-while-revalidate/);
+    assert.deepEqual(await response.json(), [{
+      id: "helgtur",
+      title: "Helgtur",
+      description: "Tre redaktionellt valda stopp på Gotland.",
+      sortOrder: 2,
+      placeIds: ["active-place", "active-place-two"],
+    }]);
+  });
+});
+
 test("place creation rejects invalid and already used inactive IDs", async () => {
   await withServer({ apiKey: "test-key" }, async ({ baseUrl, database }) => {
     const headers = { "Content-Type": "application/json", "X-API-Key": "test-key" };

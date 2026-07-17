@@ -16,6 +16,7 @@ function icon(name) {
     external: '<path d="M14 3h7v7M10 14L21 3M21 14v6a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1h6"/>',
     key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l8-8m-3 3l3 3m-6 0l3 3"/>',
     alert: '<path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z"/><path d="M12 7v4m0 4h.01"/>',
+    collection: '<path d="M4 5h16v4H4zM4 11h16v8H4z"/><path d="M8 15h8"/>',
   };
   return `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths[name] || ''}</svg>`;
 }
@@ -26,6 +27,7 @@ function layout({ title, body, user = null, active = '', description = '' }) {
     <nav aria-label="Huvudmeny">
       <a class="nav-link ${active === 'dashboard' ? 'active' : ''}" href="/admin">${icon('grid')}Översikt</a>
       <a class="nav-link ${active === 'places' ? 'active' : ''}" href="/admin/places">${icon('pin')}Platser</a>
+      <a class="nav-link ${active === 'collections' ? 'active' : ''}" href="/admin/collections">${icon('collection')}Samlingar</a>
       <a class="nav-link ${active === 'corrections' ? 'active' : ''}" href="/admin/corrections">${icon('alert')}Rättelser</a>
       <a class="nav-link nav-create" href="/admin/places/new">${icon('plus')}Ny plats</a>
     </nav>
@@ -87,6 +89,7 @@ export function dashboardView({ stats, recent, user }) {
     ['Publicerade', stats.active || 0, 'grid', 'Synliga i guiden'],
     ['Arkiverade', stats.archived || 0, 'archive', 'Dolda från besökare'],
     ['Kategorier', stats.categories || 0, 'map', 'Används just nu'],
+    ['Publicerade samlingar', stats.collections || 0, 'collection', 'Synliga i guiden'],
     ['Nya rättelser', stats.corrections || 0, 'alert', 'Väntar på granskning'],
   ].map(([label, value, iconName, hint]) => `<article class="stat-card"><span class="stat-icon">${icon(iconName)}</span><div><span>${escapeHtml(label)}</span><strong>${value}</strong><small>${escapeHtml(hint)}</small></div></article>`).join('');
   return layout({ title: 'Översikt', user, active: 'dashboard', body:
@@ -126,6 +129,45 @@ export function placesView({ result, categories, filters, csrf, user, notice = '
       <label><span class="sr-only">Status</span><select name="status"><option value="all" ${filters.status === 'all' ? 'selected' : ''}>Alla statusar</option><option value="active" ${filters.status === 'active' ? 'selected' : ''}>Publicerade</option><option value="archived" ${filters.status === 'archived' ? 'selected' : ''}>Arkiverade</option></select></label>
       <button class="button secondary" type="submit">Filtrera</button>${filters.query || filters.category || filters.status !== 'all' ? '<a class="clear-link" href="/admin/places">Rensa</a>' : ''}
     </form>${placeTable(result.rows, csrf)}${pagination({ ...result, query: params })}</section>` });
+}
+
+export function collectionsView({ rows, csrf, user, notice = '', error = '' }) {
+  const content = rows.length ? `<div class="table-scroll"><table><thead><tr><th>Samling</th><th>Platser</th><th>Status</th><th><span class="sr-only">Åtgärder</span></th></tr></thead><tbody>${rows.map((item) =>
+    `<tr><td><a class="place-name" href="/admin/collections/${encodeURIComponent(item.id)}/edit"><span class="place-mark">✦</span><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.id)}</small></span></a></td>
+    <td>${item.place_count}</td><td>${statusBadge(item.is_published)}</td><td class="actions">
+      <a class="icon-button" href="/admin/collections/${encodeURIComponent(item.id)}/edit" aria-label="Redigera ${escapeHtml(item.title)}">${icon('edit')}</a>
+      <form method="post" action="/admin/collections/${encodeURIComponent(item.id)}/status"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><input type="hidden" name="published" value="${item.is_published ? '0' : '1'}"><button class="icon-button" aria-label="${item.is_published ? 'Avpublicera' : 'Publicera'} ${escapeHtml(item.title)}" title="${item.is_published ? 'Avpublicera' : 'Publicera'}">${icon(item.is_published ? 'archive' : 'restore')}</button></form>
+    </td></tr>`).join('')}</tbody></table></div>` : `<div class="empty"><span>${icon('collection')}</span><h2>Inga samlingar ännu</h2><p>Skapa ett redaktionellt urval av platser för besökarna.</p></div>`;
+  return layout({ title: 'Samlingar', user, active: 'collections', body:
+    `${header('Samlingar', 'Kuraterade och ordnade platsurval i den publika guiden.', `<a class="button primary" href="/admin/collections/new">${icon('plus')}Ny samling</a>`)}
+    ${notice ? `<div class="alert success" role="status">${escapeHtml(notice)}</div>` : ''}
+    ${error ? `<div class="alert error" role="alert">${escapeHtml(error)}</div>` : ''}
+    <section class="panel">${content}</section>` });
+}
+
+export function collectionFormView({ collection, places, errors = {}, csrf, user, isNew = false, notice = '' }) {
+  const placeIds = collection.placeIds?.length ? collection.placeIds : [''];
+  const options = places.map((place) => `<option value="${escapeHtml(place.id)}">${escapeHtml(place.name)}${place.is_active ? '' : ' (arkiverad)'}</option>`).join('');
+  const placeRows = placeIds.map((placeId) => `<div class="repeat-row"><input name="placeId[]" list="collection-place-options" value="${escapeHtml(placeId)}" placeholder="Sök namn eller ange plats-ID" autocomplete="off" aria-label="Plats-ID i samlingen"><button class="icon-button remove-row" type="button" aria-label="Ta bort plats">×</button></div>`).join('');
+  return layout({ title: isNew ? 'Ny samling' : collection.title, user, active: 'collections', body:
+    `<a class="back-link" href="/admin/collections">${icon('arrow')}Till samlingarna</a>
+    ${header(isNew ? 'Ny samling' : 'Redigera samling', 'Ordningen nedan blir ordningen i den publika presentationen.')}
+    ${notice ? `<div class="alert success" role="status">${escapeHtml(notice)}</div>` : ''}
+    <form class="place-form" method="post" action="${isNew ? '/admin/collections' : `/admin/collections/${encodeURIComponent(collection.id)}`}" novalidate>
+      <input type="hidden" name="csrf" value="${escapeHtml(csrf)}">
+      <section class="form-section"><div class="section-heading"><span>1</span><div><h2>Presentation</h2><p>Kort, tydlig och redaktionellt motiverad.</p></div></div><div class="form-grid">
+        ${isNew ? textField({ label: 'ID', name: 'id', value: collection.id, required: true, help: 'Delbar URL-nyckel, exempelvis barnens-visby.', error: errors.id, attrs: 'pattern="[a-z0-9]+(?:-[a-z0-9]+)*" maxlength="64"' }) : `<div class="field"><span>ID</span><strong>${escapeHtml(collection.id)}</strong><small>ID kan inte ändras efter att samlingen skapats.</small></div>`}
+        ${textField({ label: 'Titel', name: 'title', value: collection.title, required: true, error: errors.title, attrs: 'minlength="2" maxlength="80"' })}
+        ${textField({ label: 'Sortering', name: 'sortOrder', value: collection.sort_order ?? collection.sortOrder ?? 0, type: 'number', required: true, error: errors.sortOrder, attrs: 'min="0" max="9999"' })}
+        <label class="field full"><span>Beskrivning <b aria-hidden="true">*</b></span><textarea name="description" minlength="10" maxlength="500" rows="4" required ${errors.description ? 'aria-invalid="true"' : ''}>${escapeHtml(collection.description || '')}</textarea><small>10–500 tecken. Förklara varför platserna hör ihop.</small>${errorFor(errors, 'description')}</label>
+        <label class="checkbox-field full"><input type="checkbox" name="isPublished" ${collection.is_published || collection.isPublished ? 'checked' : ''}><span><strong>Publicerad</strong><small>Visas i appen när minst två aktiva platser ingår.</small></span></label>
+      </div></section>
+      <section class="form-section"><div class="section-heading"><span>2</span><div><h2>Platser och ordning</h2><p>Välj 2–20 platser. Översta platsen visas först.</p></div></div>
+        <div class="repeater" data-repeater="collection-place"><div class="repeater-head"><span>Platslista</span><button class="text-button" type="button" data-add-row="collection-place">+ Lägg till plats</button></div><div data-rows>${placeRows}</div></div>
+        <datalist id="collection-place-options">${options}</datalist>${errorFor(errors, 'placeIds')}
+      </section>
+      <div class="form-actions"><a class="button secondary" href="/admin/collections">Avbryt</a><button class="button primary" type="submit">${isNew ? 'Skapa samling' : 'Spara samling'}</button></div>
+    </form>` });
 }
 
 const correctionIssueLabels = {

@@ -64,6 +64,8 @@ Produkten kombinerar:
 - Installerbar PWA med offline-appskal och senast lyckat hamtade platsdata
 - Besokare kan foresla platsrattelser som granskas manuellt i CMS utan att
   platsregistret andras automatiskt
+- Redaktionella samlingar med 2-20 ordnade platser, publiceringsflode i CMS och
+  delbara `samling=`-lankar i appen
 - Fem genererade, optimerade WebP-bilder i `src/assets/`
 - shadcn/ui-komponenter, Lucide-ikoner och semantiska OKLCH-tokens
 - Tillgangliga fokus-, save- och navigationsstates samt safe-area-stod
@@ -174,10 +176,10 @@ enligt valt fardsatt.
 
 ## Delbara upptacktslankar
 
-Sokning, publik kategori, kartfokus, vald plats och praktiska filter speglas i
-adressfaltet med `q`, `kategori`, `vy=karta`, `plats`, `radie` och `fakta`.
+Sokning, publik kategori, kartfokus, vald plats, redaktionell samling och praktiska filter speglas i
+adressfaltet med `q`, `kategori`, `vy=karta`, `plats`, `samling`, `radie` och `fakta`.
 URL-varden valideras och okanda
-kategorier eller ogiltiga plats-id:n ignoreras. Browserns bakat-/framatknappar
+kategorier eller ogiltiga plats-/samlings-id:n ignoreras. Browserns bakat-/framatknappar
 aterstaller lankens state. Sparade plats-id:n och GPS-koordinater ingar aldrig i
 URL:en.
 
@@ -212,7 +214,7 @@ kan rensas samlat och foljer med i en delbar URL utan GPS-koordinater.
 
 Produktionsbygget genererar manifest, 192/512px appikoner och en versionssatt
 service worker. Appskalets lokala JS, CSS och bilder forcachelagras, och
-`/api/places` samt `/api/categories` varms vid installation och uppdateras med
+`/api/places`, `/api/categories` samt `/api/collections` varms vid installation och uppdateras med
 network-first. Vid natfel anvands senaste lyckade API-svar. En synlig
 offline-status forklarar att kartplattor och livevader ar externa och darfor kan
 saknas utan nat. Gutafinn service-worker-cachar inte GPS, externa kartplattor,
@@ -233,6 +235,14 @@ forsok utan nat visar ett tydligt fel i stallet for att lova senare leverans.
 
 - Method: GET
 - Path: /api/categories
+
+### Hamta redaktionella samlingar
+
+- Method: GET
+- Path: /api/collections
+- Returnerar endast publicerade samlingar med minst tva aktiva platser.
+- Varje objekt innehaller `id`, titel, beskrivning, sortering och en ordnad
+  `placeIds`-lista. Samlingsurvalet andrar aldrig platsobjekten.
 
 ### Hamta en plats
 
@@ -316,6 +326,8 @@ reproducerbarhet men ar inte den frontend som Compose eller Vite serverar.
 - Migrering 5 skapar `visitor_corrections`. CMS visar koade rapporter med
   statusarna `new`, `reviewed`, `resolved` och `dismissed`, granskaridentitet
   samt frivillig granskningsanteckning.
+- Migrering 6 skapar `collections` och `collection_places`. Backend ager schemat;
+  CMS skapar, ordnar och publicerar samlingarna utan att duplicera platsdata.
 - `npm run seed` anvander `UPSERT` och kan koras flera ganger.
 - Seed uppdaterar OpenStreetMaps karndata och fyller adress, kontaktuppgifter och
   oppettider nar de finns i kallan. Manuellt berikade falt skrivs inte tomma.

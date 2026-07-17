@@ -137,6 +137,9 @@ Skyddar mot:
     CMS-tester. Verifiera 10-1000 tecken, frivillig e-post, honeypot, fem
     forsok/IP/timme utan lagrad IP, online-only-formular och att CMS-status aldrig
     uppdaterar platsdata automatiskt.
+19. Vid andring i redaktionella samlingar: verifiera migration 6, CMS-validering,
+    minst tva aktiva publika platser, ordnad `placeIds`, `samling=`-URL och
+    network-first-cache for `/api/collections`.
 
 `Overraska mig` ska fortsatt ha ren, testbar domanlogik i `src/lib/surprise.ts`,
 begransad localStorage-hantering i `src/lib/surprise-storage.ts` och UI i

@@ -24,6 +24,7 @@ export type DiscoveryUrlState = {
   category: Category
   mapView: boolean
   selectedPlaceId: string | null
+  collectionId: string | null
   practicalFilters: PracticalFilterState
 }
 
@@ -32,6 +33,7 @@ export function parseDiscoverySearch(search: string): DiscoveryUrlState {
   const query = (params.get("q") ?? "").trim().slice(0, 100)
   const category = SLUG_CATEGORIES.get(params.get("kategori") ?? "") ?? "Allt"
   const requestedPlaceId = params.get("plats")?.trim() ?? ""
+  const requestedCollectionId = params.get("samling")?.trim() ?? ""
   const requestedRadius = Number(params.get("radie"))
   const radiusKm: DistanceRadius = [1, 5, 10].includes(requestedRadius)
     ? requestedRadius as Exclude<DistanceRadius, null>
@@ -43,6 +45,7 @@ export function parseDiscoverySearch(search: string): DiscoveryUrlState {
     category,
     mapView: params.get("vy") === "karta",
     selectedPlaceId: PLACE_ID_PATTERN.test(requestedPlaceId) ? requestedPlaceId : null,
+    collectionId: PLACE_ID_PATTERN.test(requestedCollectionId) ? requestedCollectionId : null,
     practicalFilters: {
       radiusKm,
       hasOpeningHours: facts.has("tider"),
@@ -60,6 +63,9 @@ export function buildDiscoverySearch(state: DiscoveryUrlState) {
   if (state.mapView) params.set("vy", "karta")
   if (state.selectedPlaceId && PLACE_ID_PATTERN.test(state.selectedPlaceId)) {
     params.set("plats", state.selectedPlaceId)
+  }
+  if (state.collectionId && PLACE_ID_PATTERN.test(state.collectionId)) {
+    params.set("samling", state.collectionId)
   }
   if (state.practicalFilters.radiusKm !== null) {
     params.set("radie", String(state.practicalFilters.radiusKm))

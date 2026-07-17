@@ -175,6 +175,36 @@ const MIGRATIONS = [
       `);
     },
   },
+  {
+    version: 6,
+    name: "add_editorial_collections",
+    up(db) {
+      db.exec(`
+        CREATE TABLE collections (
+          id           TEXT PRIMARY KEY,
+          title        TEXT NOT NULL CHECK (length(title) BETWEEN 2 AND 80),
+          description  TEXT NOT NULL CHECK (length(description) BETWEEN 10 AND 500),
+          is_published INTEGER NOT NULL DEFAULT 0 CHECK (is_published IN (0, 1)),
+          sort_order   INTEGER NOT NULL DEFAULT 0,
+          created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE collection_places (
+          collection_id TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+          place_id      TEXT NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+          sort_order    INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (collection_id, place_id),
+          UNIQUE (collection_id, sort_order)
+        );
+
+        CREATE INDEX idx_collections_published_order
+          ON collections(is_published, sort_order, title);
+        CREATE INDEX idx_collection_places_place
+          ON collection_places(place_id, collection_id);
+      `);
+    },
+  },
 ];
 
 function runMigrations(db) {

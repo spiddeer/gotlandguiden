@@ -253,6 +253,82 @@ test('admin can review visitor corrections without changing place data', async (
   app.store.db.prepare('DELETE FROM places WHERE id=?').run('correction-place');
 });
 
+test('admin can create and reorder a published editorial collection', async () => {
+  const addPlace = app.store.db.prepare(`INSERT OR IGNORE INTO places
+    (id,name,category,lat,lng,description,is_active) VALUES (?,?,?,?,?,?,1)`);
+  addPlace.run('collection-one', 'Första samlingsplatsen', 'natur', 57.5, 18.5, 'Första');
+  addPlace.run('collection-two', 'Andra samlingsplatsen', 'sevardhet', 57.6, 18.6, 'Andra');
+  const cookie = await login();
+  const token = await csrf(cookie);
+
+  const createBody = new URLSearchParams({
+    csrf: token,
+    id: 'helgtur',
+    title: 'Helgtur på östra Gotland',
+    description: 'Två redaktionellt valda stopp för en lugn utflyktsdag.',
+    sortOrder: '20',
+    isPublished: 'on',
+  });
+  createBody.append('placeId[]', 'collection-one');
+  createBody.append('placeId[]', 'collection-two');
+  const created = await fetch(`${baseUrl}/admin/collections`, {
+    method: 'POST', redirect: 'manual', headers: {
+      cookie, 'content-type': 'application/x-www-form-urlencoded',
+    }, body: createBody,
+  });
+  assert.equal(created.status, 303);
+  assert.match(created.headers.get('location'), /\/admin\/collections\/helgtur\/edit/);
+
+  const collection = app.store.getCollection('helgtur');
+  assert.equal(collection.is_published, 1);
+  assert.deepEqual(collection.placeIds, ['collection-one', 'collection-two']);
+  const list = await fetch(`${baseUrl}/admin/collections`, { headers: { cookie } });
+  assert.equal(list.status, 200);
+  assert.match(await list.text(), /Helgtur på östra Gotland/);
+
+  const editBody = new URLSearchParams({
+    csrf: token,
+    title: 'Helgtur i ny ordning',
+    description: 'Samma redaktionella utflykt med en förbättrad stoppordning.',
+    sortOrder: '10',
+    isPublished: 'on',
+  });
+  editBody.append('placeId[]', 'collection-two');
+  editBody.append('placeId[]', 'collection-one');
+  const updated = await fetch(`${baseUrl}/admin/collections/helgtur`, {
+    method: 'POST', redirect: 'manual', headers: {
+      cookie, 'content-type': 'application/x-www-form-urlencoded',
+    }, body: editBody,
+  });
+  assert.equal(updated.status, 303);
+  assert.deepEqual(app.store.getCollection('helgtur').placeIds, ['collection-two', 'collection-one']);
+
+  const invalidBody = new URLSearchParams({
+    csrf: token,
+    title: 'För kort lista',
+    description: 'Den här beskrivningen är tillräckligt lång.',
+    sortOrder: '0',
+    'placeId[]': 'collection-one',
+  });
+  const invalid = await fetch(`${baseUrl}/admin/collections/helgtur`, {
+    method: 'POST', headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+    body: invalidBody,
+  });
+  assert.equal(invalid.status, 422);
+
+  app.store.db.prepare('UPDATE collections SET is_published=0 WHERE id=?').run('helgtur');
+  app.store.db.prepare('UPDATE places SET is_active=0 WHERE id=?').run('collection-two');
+  const publishWithOneActive = await fetch(`${baseUrl}/admin/collections/helgtur/status`, {
+    method: 'POST', headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ csrf: token, published: '1' }),
+  });
+  assert.equal(publishWithOneActive.status, 422);
+  assert.equal(app.store.getCollection('helgtur').is_published, 0);
+
+  app.store.db.prepare('DELETE FROM collections WHERE id=?').run('helgtur');
+  app.store.db.prepare('DELETE FROM places WHERE id IN (?,?)').run('collection-one', 'collection-two');
+});
+
 test('a user can sign up with a passkey and receives an authenticated CMS session', async () => {
   const signupPage = await fetch(`${baseUrl}/signup`);
   assert.equal(signupPage.status, 200);

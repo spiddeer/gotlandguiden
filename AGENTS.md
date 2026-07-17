@@ -67,6 +67,8 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
 - `src/components/surprise-adventure.tsx`: tillgangligt helskarmsflode for tid, fardsatt, GPS-states och aventyrskort.
 - `src/components/visitor-correction-form.tsx`: validerat onlineformular som
   koar besokarnas rattelseforslag utan direkt platsandring.
+- `src/components/editorial-collections.tsx`: horisontell samlingsyta och tydligt
+  aktivt/redaktionellt urval.
 - `src/components/day-planner.tsx`: intern dagsplan fran sparade platser med
   fardsatt, etapper och sanningsenliga uppskattningar.
 - `src/lib/places.ts`: API-typer, kategorimappning, avstand, oppettider och filtrering.
@@ -74,7 +76,8 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
 - `src/lib/surprise-storage.ts`: validerad localStorage-state med max 20 historikposter.
 - `src/lib/weather.ts`: livevader och solnedgang fran Open-Meteo.
 - `src/lib/discovery-url.ts`: validerad parse/serialisering av delbar sokning,
-  kategori, kartvy och vald plats.
+  kategori, kartvy, vald plats och redaktionell samling.
+- `src/lib/collections.ts`: strikt parsning och sortering av publika samlingar.
 - `src/lib/day-planner.ts`: deterministisk narsta-stopp-ordning, max atta stopp
   och beraknad stracka/restid.
 - `src/lib/map-area.ts`: validerad viewportfiltrering inklusive datumlinje-fall.
@@ -98,6 +101,8 @@ Detta dokument ar den primara kontexten for AI-agenter som jobbar i repot.
 - `backend/place-repository.js`: Datakontrakt, relationslasning och skrivning.
 - `backend/correction-repository.js`: Validering och lagring av besokarnas
   rattelseforslag.
+- `backend/collection-repository.js`: Publik lasning av publicerade samlingar
+  med minst tva aktiva platser.
 - `backend/import-osm.js`: Overpass-import, kategorisering, deduplicering och
   generering av seed- samt fallback-snapshot.
 - `backend/seed.js`: Idempotent OSM-import vid containerstart.
@@ -147,9 +152,15 @@ oforandrade markorer for filter, GPS eller val; initiering, markordiff,
 GPS och selection ska forbli separata.
 
 URL-state far endast innehalla sokfras, publik kategori, `vy=karta`, ett
-validerat plats-id och praktiska filter via `radie`/`fakta`. GPS-koordinater och innehållet i sparlistan far aldrig
+validerat plats-id, `samling` och praktiska filter via `radie`/`fakta`. GPS-koordinater och innehållet i sparlistan far aldrig
 serialiseras. Okanda URL-varden ska falla tillbaka till `Allt`/hemmavy, och
 browserhistorik ska kunna aterstalla state utan full sidladdning.
+
+Redaktionella samlingar innehaller 2-20 ordnade plats-id:n och far endast visas
+publikt nar de ar publicerade och minst tva lankade platser ar aktiva. Den
+redaktionella ordningen ska bevaras aven med GPS; sokning, kategori, praktiska
+filter och kartomrade far laggas ovanpa urvalet. Samlingar duplicerar eller
+andrar aldrig platsdata.
 
 Dagsplaneraren ska alltid utga fran den beständiga sparordningen, men aldrig
 lagra en plan eller GPS. Med GPS valjs narmaste forsta stopp; utan GPS blir den
@@ -196,7 +207,7 @@ Publika kategorier ar `mat`, `sevardhet`, `strand`, `smultronstallen`, `natur`,
 ska ha namn, beskrivning, koordinater och kalla; informationspanelen visar
 dessutom all tillganglig adress, kontakt, oppettid och tillganglighet.
 
-API:t ska fortsatt exponera `/api/categories` och `/api/places`. Den aktiva
+API:t ska fortsatt exponera `/api/categories`, `/api/places` och `/api/collections`. Den aktiva
 Gutafinn-frontenden anvander `/api/places` som enda platskalla. `public/`-
 fallbacken bevaras for importens reproducerbarhet men ar inte aktiv runtime-frontend.
 
@@ -305,6 +316,8 @@ aterstallbart kartfokus, bevarade filter och synlig OpenStreetMap-attribution.
     och far inte skapa mobil sidscroll eller dolja bottom-nav/topnavigation.
 13. Vid rattelsekoandringar: kor frontend-, backend- och CMS-tester; bevara
     online-only-flodet, rate limit, integritet och manuell granskning.
+14. Vid samlingsandringar: testa publiceringsgrans, 2-20 aktiva platser,
+    redaktionell ordning, delbar URL, offlinecache och CMS-validering.
 13. Vid Nginx-/headerandringar: bygg web-imagen, kor `nginx -t` och kontrollera
     GPS, Open-Meteo, Google Fonts, kartplattor och bada hostnamnens CSP.
 14. Vid kartomradesandringar: testa bounds-filtret och callbacken utan att flytta

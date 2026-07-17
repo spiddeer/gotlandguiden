@@ -69,6 +69,12 @@ describe("place mapping", () => {
     expect(results.map((item) => item.id)).toEqual(["near", "far"])
   })
 
+  it("preserves the explicit order of an editorial collection", () => {
+    const ordered = [place({ id: "second", name: "Ö-stoppet" }), place({ id: "first", name: "A-stoppet" })]
+    expect(filterPlaces(ordered, "Allt", "", null, undefined, true).map((item) => item.id))
+      .toEqual(["second", "first"])
+  })
+
   it("only claims open when structured hours support it", () => {
     const mondayAtNoon = new Date("2026-07-13T12:00:00+02:00")
     expect(getOpeningState(place({ openingHours: { raw: "Mo-Fr 10:00-18:00", weekly: [] } }), mondayAtNoon).kind).toBe("known")

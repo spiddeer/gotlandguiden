@@ -50,6 +50,22 @@ export function initializeDomainDatabase(databasePath) {
       reviewed_at TEXT,
       reviewed_by TEXT
     );
+    CREATE TABLE collections (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL CHECK (length(title) BETWEEN 2 AND 80),
+      description TEXT NOT NULL CHECK (length(description) BETWEEN 10 AND 500),
+      is_published INTEGER NOT NULL DEFAULT 0 CHECK (is_published IN (0, 1)),
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE collection_places (
+      collection_id TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+      place_id TEXT NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (collection_id, place_id),
+      UNIQUE (collection_id, sort_order)
+    );
     INSERT INTO categories (id, label, color, emoji, sort_order) VALUES
       ('mat', 'Mat & dryck', '#c0603f', '🍽️', 10),
       ('sevardhet', 'Sevärdheter', '#e0a458', '🏛️', 20),

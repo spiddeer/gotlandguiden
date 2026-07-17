@@ -365,6 +365,7 @@ export function filterPlaces(
   query: string,
   position: Coordinates | null,
   savedIds?: Set<string>,
+  preserveOrder = false,
 ) {
   const normalizedQuery = query.trim().toLocaleLowerCase("sv")
 
@@ -388,6 +389,7 @@ export function filterPlaces(
       return matchesCategory && matchesQuery && matchesSaved
     })
     .sort((a, b) => {
+      if (preserveOrder) return 0
       if (a.distanceKm != null && b.distanceKm != null) return a.distanceKm - b.distanceKm
       const aPriority = curatedPlaceIds.indexOf(a.id)
       const bPriority = curatedPlaceIds.indexOf(b.id)

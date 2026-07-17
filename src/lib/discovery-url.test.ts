@@ -6,12 +6,13 @@ import { DEFAULT_PRACTICAL_FILTERS } from "@/lib/practical-filters"
 describe("shareable discovery URL state", () => {
   it("parses supported filters, map view, and a place selection", () => {
     expect(
-      parseDiscoverySearch("?q=raukar&kategori=sevardheter&vy=karta&plats=hovs-hallar-n123"),
+      parseDiscoverySearch("?q=raukar&kategori=sevardheter&vy=karta&plats=hovs-hallar-n123&samling=helgtur"),
     ).toEqual({
       query: "raukar",
       category: "Sevärdheter",
       mapView: true,
       selectedPlaceId: "hovs-hallar-n123",
+      collectionId: "helgtur",
       practicalFilters: {
         radiusKm: null,
         hasOpeningHours: false,
@@ -27,6 +28,7 @@ describe("shareable discovery URL state", () => {
       category: "Allt",
       mapView: false,
       selectedPlaceId: null,
+      collectionId: null,
       practicalFilters: {
         radiusKm: null,
         hasOpeningHours: false,
@@ -43,6 +45,7 @@ describe("shareable discovery URL state", () => {
         category: "Mat & dryck",
         mapView: true,
         selectedPlaceId: "bakfickan-n123",
+        collectionId: "matupplevelser",
         practicalFilters: {
           radiusKm: 5,
           hasOpeningHours: true,
@@ -50,7 +53,7 @@ describe("shareable discovery URL state", () => {
           hasAccessibility: false,
         },
       }),
-    ).toBe("?q=saffranspannkaka&kategori=mat&vy=karta&plats=bakfickan-n123&radie=5&fakta=tider%2Ckontakt")
+    ).toBe("?q=saffranspannkaka&kategori=mat&vy=karta&plats=bakfickan-n123&samling=matupplevelser&radie=5&fakta=tider%2Ckontakt")
 
     expect(
       buildDiscoverySearch({
@@ -58,6 +61,7 @@ describe("shareable discovery URL state", () => {
         category: "Allt",
         mapView: false,
         selectedPlaceId: null,
+        collectionId: null,
         practicalFilters: {
           radiusKm: null,
           hasOpeningHours: false,
@@ -85,6 +89,7 @@ describe("shareable discovery URL state", () => {
         category,
         mapView: false,
         selectedPlaceId: null,
+        collectionId: null,
         practicalFilters: {
           radiusKm: null,
           hasOpeningHours: false,
