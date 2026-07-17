@@ -57,6 +57,39 @@ test("the API creates, reads, and enriches a place", async () => {
   });
 });
 
+test("the health check confirms that the database is ready", async () => {
+  await withServer({}, async ({ baseUrl }) => {
+    const response = await fetch(`${baseUrl}/healthz`);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { ok: true });
+  });
+});
+
+test("place creation rejects invalid and already used inactive IDs", async () => {
+  await withServer({ apiKey: "test-key" }, async ({ baseUrl, database }) => {
+    const headers = { "Content-Type": "application/json", "X-API-Key": "test-key" };
+    const place = {
+      id: "inactive-place", name: "Inaktiv plats", category: "natur",
+      lat: 57.5, lng: 18.5, description: "Test",
+    };
+    const created = await fetch(`${baseUrl}/api/places`, {
+      method: "POST", headers, body: JSON.stringify(place),
+    });
+    assert.equal(created.status, 201);
+    database.prepare("UPDATE places SET is_active=0 WHERE id=?").run(place.id);
+
+    const collision = await fetch(`${baseUrl}/api/places`, {
+      method: "POST", headers, body: JSON.stringify(place),
+    });
+    assert.equal(collision.status, 409);
+
+    const invalid = await fetch(`${baseUrl}/api/places`, {
+      method: "POST", headers, body: JSON.stringify({ ...place, id: "Ogiltigt/id" }),
+    });
+    assert.equal(invalid.status, 400);
+  });
+});
+
 test("write endpoints require a configured API key", async () => {
   await withServer({ apiKey: "" }, async ({ baseUrl }) => {
     const response = await fetch(`${baseUrl}/api/places`, {

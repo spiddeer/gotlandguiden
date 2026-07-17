@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - merge-cms
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  cms:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cms
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: cms/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm ci --prefix backend
+      - run: npm ci --prefix cms
+      - name: Initialize domain database through backend
+        run: DB_PATH="$RUNNER_TEMP/places.db" node -e "require('./backend/db').db.close()"
+      - name: Open initialized database through CMS
+        run: >-
+          DATABASE_PATH="$RUNNER_TEMP/places.db" node --input-type=module -e
+          "import { openDatabase } from './cms/src/db.js';
+          const store = openDatabase(process.env.DATABASE_PATH);
+          if (store.categories().length !== 8) process.exit(1);
+          store.close();"
+      - name: Validate Compose files
+        run: |
+          docker compose -f docker-compose.yml config -q
+          cp deploy/proxmox/.env.example deploy/proxmox/.env
+          docker compose -f deploy/proxmox/docker-compose.yml config -q
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build frontend image
+        run: docker build -f deploy/Dockerfile .
+      - name: Build backend image
+        run: docker build -f backend/Dockerfile backend
+      - name: Build CMS image
+        run: docker build -f cms/Dockerfile cms

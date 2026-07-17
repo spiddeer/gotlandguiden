@@ -447,11 +447,15 @@ function replaceSources(db, placeId, sources) {
   }
 }
 
+function placeExists(db, id) {
+  return Boolean(db.prepare("SELECT 1 FROM places WHERE id = ?").get(id));
+}
+
 function savePlace(db, input, { create = false } = {}) {
   return db.transaction(() => {
     const current = getPlace(db, input.id);
     if (!create && !current) return null;
-    if (create && current) throw new Error("Place already exists");
+    if (create && placeExists(db, input.id)) throw new Error("Place already exists");
 
     const core = {
       id: input.id,

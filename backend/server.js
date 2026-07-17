@@ -19,6 +19,8 @@ function slugify(text) {
     .replace(/(^-|-$)/g, "");
 }
 
+const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 function createUniqueId(database, name) {
   const base = slugify(name) || "plats";
   const exists = database.prepare("SELECT 1 FROM places WHERE id = ?");
@@ -31,6 +33,12 @@ function createUniqueId(database, name) {
 function validatePlaceInput(database, input, { partial = false } = {}) {
   const errors = [];
   const categories = new Set(listCategories(database).map((category) => category.id));
+
+  if (Object.hasOwn(input, "id")) {
+    if (typeof input.id !== "string" || !ID_PATTERN.test(input.id.trim())) {
+      errors.push("id must contain lowercase letters, numbers, and single hyphens only");
+    }
+  }
 
   if (!partial || Object.hasOwn(input, "name")) {
     if (typeof input.name !== "string" || !input.name.trim()) errors.push("name is required");
@@ -81,6 +89,11 @@ function createApp(database = db, { apiKey = API_KEY } = {}) {
     }
     next();
   }
+
+  app.get("/healthz", (req, res) => {
+    database.prepare("SELECT 1").get();
+    res.json({ ok: true });
+  });
 
   app.get("/api/categories", (req, res) => {
     res.json(listCategories(database));

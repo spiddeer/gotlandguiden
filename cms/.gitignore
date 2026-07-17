@@ -1,0 +1,10 @@
+.tokensave
+.env
+node_modules/
+coverage/
+data/*.backup-*
+data/
+.headroom/
+.claude/
+.ijfw/
+.planning/

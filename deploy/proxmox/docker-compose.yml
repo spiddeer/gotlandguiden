@@ -19,8 +19,29 @@ services:
     container_name: gutafinn_web
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+      cms:
+        condition: service_healthy
     ports:
       - "${WEB_PORT:-3003}:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+  cms:
+    build:
+      context: ../../cms
+    container_name: gutafinn_cms
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    env_file:
+      - ./.env
+    environment:
+      - DATABASE_PATH=/data/places.db
+      - PORT=3000
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+    volumes:
+      - ./data:/data

@@ -5,6 +5,10 @@ gora, se och ata pa Gotland just nu. Samma React-app fungerar som enkelkolumn pa
 mobil och iPad samt som synkroniserad feed/karta pa desktop. Repot innehaller
 ocksa Gutafinns befintliga Express/SQLite-API, OSM-import och Proxmox-drift.
 
+Varje push och pull request verifieras av GitHub Actions med frontendtest och
+bygge, backend- och CMS-tester, tom databasstart, Compose-validering samt alla
+tre Dockerbyggen.
+
 Dokumentationen ar avstamd mot produktionssetupen den 15 juli 2026. Aktuell
 driftsatt Git-SHA verifieras med kommandot i Proxmox-runbooken.
 

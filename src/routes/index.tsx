@@ -638,7 +638,9 @@ function FeaturedPlace({
     <Card className="gutafinn-featured-card overflow-hidden">
       <div className="gutafinn-featured-media relative h-[238px] overflow-hidden">
         <img src={getPlaceImage(place)} alt={place.name} className="size-full object-cover" />
-        <Badge className="absolute left-4 top-4 bg-card/92 text-sea-deep backdrop-blur-md">{place.tag}</Badge>
+        <Badge className="absolute left-4 top-4 max-w-[calc(100%-5.5rem)] truncate bg-card/92 text-sea-deep backdrop-blur-md">
+          {place.tag}
+        </Badge>
         <Button
           type="button"
           variant="overlay"

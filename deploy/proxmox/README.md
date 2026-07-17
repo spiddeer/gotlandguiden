@@ -140,6 +140,9 @@ systemctl status gutafinn.service
 
 Kor en manuell backup innan en release som innehaller nya migreringar. Runtime-
 databasen ligger utanfor Git och ska inte ersattas med `seed-data.json`.
+Backupscriptet anvander SQLite online-backup inuti backend-containern, kor
+`PRAGMA quick_check` pa snapshoten och publicerar arkivet atomart forst nar
+verifieringen ar godkand. Arkivet innehaller en aterlasningsbar `places.db`.
 
 ### Manuell backup
 
@@ -164,6 +167,7 @@ Verifikation:
 systemctl start gutafinn-backup.service
 systemctl status gutafinn-backup.service --no-pager
 ls -lh /opt/gutafinn/deploy/proxmox/backups/
+tar -tzf /opt/gutafinn/deploy/proxmox/backups/gutafinn-data-*.tar.gz | tail -1
 ```
 
 ## Daglig felsokning
