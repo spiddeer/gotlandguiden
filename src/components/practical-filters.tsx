@@ -112,7 +112,7 @@ export function PracticalFilters({
 
           <fieldset>
             <legend className="text-sm font-bold text-sea-deep">Uppgifter som finns</legend>
-            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+            <div className="gutafinn-practical-fact-grid mt-2 grid gap-2">
               {factOptions.map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
@@ -120,14 +120,14 @@ export function PracticalFilters({
                   aria-pressed={filters[key]}
                   onClick={() => onChange({ ...filters, [key]: !filters[key] })}
                   className={cn(
-                    "flex min-h-11 items-center gap-2 rounded-xl border px-3 text-left text-xs font-bold outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40",
+                    "flex min-h-11 min-w-0 items-center gap-2 rounded-xl border px-3 text-left text-xs font-bold outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40",
                     filters[key]
                       ? "border-sea-deep bg-sea-deep text-sea-deep-foreground"
                       : "border-border bg-card text-muted-foreground",
                   )}
                 >
                   <Icon className="size-4 shrink-0" aria-hidden="true" />
-                  {label}
+                  <span className="min-w-0 break-words">{label}</span>
                 </button>
               ))}
             </div>

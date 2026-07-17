@@ -115,6 +115,27 @@ button {
   cursor: pointer;
 }
 
+.gutafinn-practical-fact-grid,
+.gutafinn-featured-actions {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+}
+
+.gutafinn-featured-body {
+  container-name: featured-body;
+  container-type: inline-size;
+}
+
+.gutafinn-featured-header {
+  flex-direction: column;
+}
+
+@container featured-body (min-width: 20rem) {
+  .gutafinn-featured-header {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
 ::selection {
   background: var(--sand);
   color: var(--sand-foreground);

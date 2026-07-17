@@ -18,6 +18,8 @@ Gutafinn backend and deployment stack.
   while GPS drives real distances and Open-Meteo supplies live weather
 - Responsive layout: mobile and portrait tablets use one feed column; from
   1024px landscape or 1280px the 460-540px feed and flexible map sit side by side
+- Components inside the fixed desktop feed use container/content-driven layout,
+  not viewport-only `sm:` grids; long Swedish copy must wrap without collisions
 - Map: `Karta` is a restorable focus mode on desktop and an embedded Leaflet
   atlas on mobile, with bidirectional list/marker selection, GPS, clusters and
   persistently readable OpenStreetMap attribution
